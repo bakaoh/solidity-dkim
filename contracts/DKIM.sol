@@ -37,19 +37,6 @@ contract RSASHA256Algorithm {
     }
 
     function verify(bytes modulus, bytes exponent, bytes data, bytes sig) internal view returns (bool) {
-        // bytes memory exponent;
-        // bytes memory modulus;
-
-        // uint16 exponentLen = uint16(key.readUint8(4));
-        // if (exponentLen != 0) {
-        //     exponent = key.substring(5, exponentLen);
-        //     modulus = key.substring(exponentLen + 5, key.length - exponentLen - 5);
-        // } else {
-        //     exponentLen = key.readUint16(5);
-        //     exponent = key.substring(7, exponentLen);
-        //     modulus = key.substring(exponentLen + 7, key.length - exponentLen - 7);
-        // }
-
         // Recover the message from the signature
         bool ok;
         bytes memory result;
@@ -227,7 +214,7 @@ contract DKIM is RSASHA256Algorithm{
 
         var (d, s, c, a, h, b, bh) = parseSignature(headers[keccak256("dkim-signature")]);
         bytes32 digest = sha256(bytes(processBody(body, c)));
-        if (bytesToBytes32(Base64.decode(bh.toString())) != digest) return false;
+        if (Base64.decode(bh.toString()).readBytes32(0) != digest) return false;
 
         var processedHeader = processHeader(h, c);
         var crlf = "\r\n".toSlice();
@@ -254,29 +241,4 @@ contract DKIM is RSASHA256Algorithm{
 		}
 		return string(bLower);
 	}
-
-    function bytesToBytes32(bytes b) private pure returns (bytes32) {
-        bytes32 out;
-
-        for (uint i = 0; i < 32; i++) {
-            out |= bytes32(b[i] & 0xFF) >> (i * 8);
-        }
-        return out;
-    }
-    function bytes32ToString(bytes32 x) internal pure returns (string) {
-        bytes memory bytesString = new bytes(32);
-        uint charCount = 0;
-        for (uint j = 0; j < 32; j++) {
-            byte char = byte(bytes32(uint(x) * 2 ** (8 * j)));
-            if (char != 0) {
-                bytesString[charCount] = char;
-                charCount++;
-            }
-        }
-        bytes memory bytesStringTrimmed = new bytes(charCount);
-        for (j = 0; j < charCount; j++) {
-            bytesStringTrimmed[j] = bytesString[j];
-        }
-        return string(bytesStringTrimmed);
-    }
 }
