@@ -130,7 +130,7 @@ contract DKIM is RSASHA256Algorithm{
         return message.toString();
     }
 
-    function processHeader(strings.slice signatureHeaders, strings.slice method) internal view returns (
+    function processHeader(H[] newH, strings.slice signatureHeaders, strings.slice method) internal view returns (
         string
     ) {
         var crlf = "\r\n".toSlice();
@@ -139,7 +139,7 @@ contract DKIM is RSASHA256Algorithm{
         var processedHeader = new strings.slice[](tagHeader.length);
 
         for (uint j = 0; j < tagHeader.length; j++) {
-            var value = headers[keccak256(tagHeader[j].toString())].copy();
+            var value = getH(newH, tagHeader[j].toString()).copy();
             var name = _toLower(value.split(colon).toString()).toSlice();
 
             // Unfold all header field continuation lines
@@ -183,7 +183,12 @@ contract DKIM is RSASHA256Algorithm{
         exponent = e;
     }
 
-    function parse(strings.slice memory allHeaders) internal {
+    struct H {
+        strings.slice name;
+        strings.slice all;
+    }
+
+    function parse(strings.slice memory allHeaders) internal returns (H[]) {
         var delim = "\r\n".toSlice();
         var colon = ":".toSlice();
         var sp = "\x20".toSlice();
@@ -192,6 +197,7 @@ contract DKIM is RSASHA256Algorithm{
         var count = allHeaders.count(delim) + 1;
         var headerName = "".toSlice();
         var headerValue = headerName.copy();
+        H[] memory newH = new H[](count);
         for(uint i = 0; i < count; i++) {
             var part = allHeaders.split(delim);
             if (part.startsWith(sp)) {
@@ -199,24 +205,34 @@ contract DKIM is RSASHA256Algorithm{
                 headerValue._len += delim._len + part._len;
             } else {
                 if (!headerName.empty()) {
-                    headers[keccak256(_toLower(headerName.toString()))] = headerValue;
+                    newH[i] = H(_toLower(headerName.toString()).toSlice(), headerValue);
+                    // headers[keccak256(_toLower(headerName.toString()))] = headerValue;
                 }
                 headerName = part.copy().split(colon);
                 headerValue = part;
             }
         }
+        return newH;
+    }
+
+    function getH(H[] memory newH, string memory name) internal returns (strings.slice) {
+        var hn = _toLower(name).toSlice();
+        for (uint i = 0; i < newH.length; i++) {
+            if (newH[i].name.equals(hn)) return newH[i].all;
+        }
+        return "".toSlice();
     }
 
     function getLen(string memory text) public returns (bool) {
         var body = text.toSlice();
         var allHeaders = body.split("\r\n\r\n".toSlice());
-        parse(allHeaders);
+        var newH = parse(allHeaders);
 
-        var (d, s, c, a, h, b, bh) = parseSignature(headers[keccak256("dkim-signature")]);
+        var (d, s, c, a, h, b, bh) = parseSignature(getH(newH, "dkim-signature").copy());
         bytes32 digest = sha256(bytes(processBody(body, c)));
         if (Base64.decode(bh.toString()).readBytes32(0) != digest) return false;
 
-        var processedHeader = processHeader(h, c);
+        var processedHeader = processHeader(newH, h, c);
         var crlf = "\r\n".toSlice();
         while (b.contains(crlf)) {
             b = b.split(crlf).concat(b).toSlice();
