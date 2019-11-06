@@ -1,35 +1,65 @@
 pragma solidity ^0.4.14;
 
 import "./strings.sol";
+import "./BytesUtils.sol";
+import "./buffer.sol";
 
 contract RSASHA256Algorithm {
     using BytesUtils for *;
+    using Buffer for *;
 
-    function verify(bytes key, bytes data, bytes sig) external view returns (bool) {
-        bytes memory exponent;
-        bytes memory modulus;
+    /**
+    * @dev Computes (base ^ exponent) % modulus over big numbers.
+    */
+    function modexp(bytes memory base, bytes memory exponent, bytes memory modulus) internal view returns (bool success, bytes memory output) {
+        uint size = (32 * 3) + base.length + exponent.length + modulus.length;
 
-        uint16 exponentLen = uint16(key.readUint8(4));
-        if (exponentLen != 0) {
-            exponent = key.substring(5, exponentLen);
-            modulus = key.substring(exponentLen + 5, key.length - exponentLen - 5);
-        } else {
-            exponentLen = key.readUint16(5);
-            exponent = key.substring(7, exponentLen);
-            modulus = key.substring(exponentLen + 7, key.length - exponentLen - 7);
+        Buffer.buffer memory input;
+        input.init(size);
+
+        input.appendBytes32(bytes32(base.length));
+        input.appendBytes32(bytes32(exponent.length));
+        input.appendBytes32(bytes32(modulus.length));
+        input.append(base);
+        input.append(exponent);
+        input.append(modulus);
+
+        output = new bytes(modulus.length);
+
+        assembly {
+            success := staticcall(gas(), 5, add(mload(input), 32), size, add(output, 32), mload(modulus))
         }
+    }
+
+    function rsarecover(bytes memory N, bytes memory E, bytes memory S) internal view returns (bool, bytes memory) {
+        return modexp(S, E, N);
+    }
+
+    function verify(bytes modulus, bytes exponent, bytes data, bytes sig) internal view returns (bool) {
+        // bytes memory exponent;
+        // bytes memory modulus;
+
+        // uint16 exponentLen = uint16(key.readUint8(4));
+        // if (exponentLen != 0) {
+        //     exponent = key.substring(5, exponentLen);
+        //     modulus = key.substring(exponentLen + 5, key.length - exponentLen - 5);
+        // } else {
+        //     exponentLen = key.readUint16(5);
+        //     exponent = key.substring(7, exponentLen);
+        //     modulus = key.substring(exponentLen + 7, key.length - exponentLen - 7);
+        // }
 
         // Recover the message from the signature
         bool ok;
         bytes memory result;
-        (ok, result) = RSAVerify.rsarecover(modulus, exponent, sig);
+        (ok, result) = rsarecover(modulus, exponent, sig);
 
         // Verify it ends with the hash of our data
         return ok && sha256(data) == result.readBytes32(result.length - 32);
     }
 }
 
-contract DKIM {
+contract DKIM is RSASHA256Algorithm{
     using strings for *;
 
     mapping(bytes32 => strings.slice) public headers;
@@ -157,7 +187,16 @@ contract DKIM {
         return crlf.join(processedHeader);
     }
 
-    function getLen(string memory text) public returns (string) {
+    bytes public modulus;
+    bytes public exponent;
+    bytes public sig;
+    function set(bytes m, bytes e, bytes s) public {
+        modulus = m;
+        exponent = e;
+        sig = s;
+    }
+
+    function getLen(string memory text) public returns (bool) {
         body = text.toSlice();
         var allHeaders = body.split("\r\n\r\n".toSlice());
 
@@ -184,11 +223,9 @@ contract DKIM {
         }
 
         var (,,,,,,signatureHeaders) = parseSignature(headers[keccak256("dkim-signature")]);
-
         // bytes32 h = sha256(bytes(processBody(body, body)));
         var processedHeader = processHeader(signatureHeaders, signatureHeaders);
-
-        return processedHeader;
+        return verify(modulus, exponent, bytes(processedHeader), sig);
     }
 
     function mLower(bytes bStr, uint len) internal pure {
