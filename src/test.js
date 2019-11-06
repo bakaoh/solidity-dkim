@@ -202,9 +202,4 @@ console.log("verified", verified);
 
 // console.log(Buffer.from(processedHeader,'utf8').toString('hex'))
 
-console.log(Buffer.from("Y3kwptsKTOHCqiQenR9ptJ7blxDYtJbi+0+uYn+Aw8LC6Kk9OkczBzzjFPHXWGa//q" +
-"K6V0kufbCZ0YPEkU14b0ZIexVFIbIiI7TAPOTDZzrMPEjkhh1D9nKsl3gt120eyli2Hf" +
-"/IkGCnHcKW87+Qipt68pjd39cD+zun3VSdcXD/vvkvhchNdjvDVwyRzJN2xMbVzQ33cR" +
-"SA/5ZZEAnhrk2w1+tY5Mldel7HOJI0sICOUXOBQQUumY9Z9lKlUs0vXadByNzlJO3S+U" +
-"onH3xTIzUc5uB/5Zoga4QBLdeDUUlSBPM6QaYc3NDi7nrnqPfalkVBa+jMLYQpXUfx6/" +
-"mfNg==", "base64").toString('hex'));
+console.log(Buffer.from("9w2H8ucfF1w3+Zqu9gpPcHgTU9GHPjw7E2HYHHlZEkw=", "base64").toString('hex'));

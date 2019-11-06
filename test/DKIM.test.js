@@ -12,22 +12,21 @@ contract("DKIM", function([_, registryFunder, creator, operator]) {
   });
 
   it("return len", async function() {
-    let x = await this.dkim.decode(
-      "iPc3RHh9oXL6+dvuPM0hYt1vdj6U4hN83BFxhumWsSXnFDFmbSG4OtXHPF823HoZAA" +
-        "4MbFQu5VgfvAQ+FmnKyfON2WdJrAYicyslVXlcA6l0UKSGIH/0NHSqi/kX+4KEKaClY7" +
-        "jZkXZZ8EIl5IUBdRRUWSsySFOtrQ/9IeAb6YM="
-    );
-    console.log(JSON.stringify(x));
-    x.should.be.equal("228");
-
-    // await this.dkim.set(
-    //   "0x9157daff5eb845df246f5e315144ff112ac4f7caa555ad9185620b0a2e5ffb7b14492417c804f23e9d1ce90b5a6ee5719465a85e1ad8ff9b558353d4eb14ae3022f2ef2b25fae5e78fc37c0db1431524fefa6da783b62950694939e623caab7873a110cff9bb848f43e58afcfcb14de54af4f1fd3939e2472c6b9514f174e955",
-    //   "0x10001",
-    //   "0x88f73744787da172faf9dbee3ccd2162dd6f763e94e2137cdc117186e996b125e71431666d21b83ad5c73c5f36dc7a19000e0c6c542ee5581fbc043e1669cac9f38dd96749ac0622732b2555795c03a97450a486207ff43474aa8bf917fb828429a0a563b8d9917659f04225e48501751454592b324853adad0ffd21e01be983"
+    // let x = await this.dkim.decode(
+    //   "iPc3RHh9oXL6+dvuPM0hYt1vdj6U4hN83BFxhumWsSXnFDFmbSG4OtXHPF823HoZAA" +
+    //     "4MbFQu5VgfvAQ+FmnKyfON2WdJrAYicyslVXlcA6l0UKSGIH/0NHSqi/kX+4KEKaClY7" +
+    //     "jZkXZZ8EIl5IUBdRRUWSsySFOtrQ/9IeAb6YM="
     // );
-    // let x = await this.dkim.getLen.call(message.toString());
     // console.log(JSON.stringify(x));
     // x.should.be.equal("228");
+
+    await this.dkim.set(
+      "0x9157daff5eb845df246f5e315144ff112ac4f7caa555ad9185620b0a2e5ffb7b14492417c804f23e9d1ce90b5a6ee5719465a85e1ad8ff9b558353d4eb14ae3022f2ef2b25fae5e78fc37c0db1431524fefa6da783b62950694939e623caab7873a110cff9bb848f43e58afcfcb14de54af4f1fd3939e2472c6b9514f174e955",
+      "0x10001"
+    );
+    let x = await this.dkim.getLen.call(message.toString());
+    console.log(JSON.stringify(x));
+    x.should.be.equal("228");
 
     // let x = (await this.dkim.verify(
     //   '0x9157daff5eb845df246f5e315144ff112ac4f7caa555ad9185620b0a2e5ffb7b14492417c804f23e9d1ce90b5a6ee5719465a85e1ad8ff9b558353d4eb14ae3022f2ef2b25fae5e78fc37c0db1431524fefa6da783b62950694939e623caab7873a110cff9bb848f43e58afcfcb14de54af4f1fd3939e2472c6b9514f174e955',
