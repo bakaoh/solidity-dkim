@@ -173,7 +173,7 @@ var digest = crypto
 var processedHeader = processHeader(
   signatures[0],
   ["mime-version", "from", "date", "message-id", "subject", "to"],
-  "simple"
+  "relaxed"
 );
 console.log(processedHeader);
 

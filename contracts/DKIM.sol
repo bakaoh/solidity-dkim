@@ -2,8 +2,38 @@ pragma solidity ^0.4.14;
 
 import "./strings.sol";
 
+contract RSASHA256Algorithm {
+    using BytesUtils for *;
+
+    function verify(bytes key, bytes data, bytes sig) external view returns (bool) {
+        bytes memory exponent;
+        bytes memory modulus;
+
+        uint16 exponentLen = uint16(key.readUint8(4));
+        if (exponentLen != 0) {
+            exponent = key.substring(5, exponentLen);
+            modulus = key.substring(exponentLen + 5, key.length - exponentLen - 5);
+        } else {
+            exponentLen = key.readUint16(5);
+            exponent = key.substring(7, exponentLen);
+            modulus = key.substring(exponentLen + 7, key.length - exponentLen - 7);
+        }
+
+        // Recover the message from the signature
+        bool ok;
+        bytes memory result;
+        (ok, result) = RSAVerify.rsarecover(modulus, exponent, sig);
+
+        // Verify it ends with the hash of our data
+        return ok && sha256(data) == result.readBytes32(result.length - 32);
+    }
+}
+
 contract DKIM {
     using strings for *;
+
+    mapping(bytes32 => strings.slice) public headers;
+    strings.slice public body;
 
     function DKIM() public {
     }
@@ -14,14 +44,14 @@ contract DKIM {
         return 'MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCRV9r/XrhF3yRvXjFRRP8RKsT3yqVVrZGFYgsKLl/7exRJJBfIBPI+nRzpC1pu5XGUZaheGtj/m1WDU9TrFK4wIvLvKyX65eePw3wNsUMVJP76baeDtilQaUk55iPKq3hzoRDP+buEj0Plivz8sU3lSvTx/Tk54kcsa5UU8XTpVQIDAQAB'.toSlice();
     }
 
-    function parse(strings.slice signature) private pure returns (
+    function parseSignature(strings.slice signature) private pure returns (
         strings.slice domain,
         strings.slice selector,
         strings.slice canonicalHeader,
         strings.slice canonicalBody,
         strings.slice hashAlgorithm,
         strings.slice verifyAlgorithm,
-        strings.slice headers
+        strings.slice signatureHeaders
     ) {
         signature.split(": ".toSlice());
         var sdelim = ";".toSlice();
@@ -42,18 +72,19 @@ contract DKIM {
                 hashAlgorithm = spart;
             } else if (tagname.endsWith("bh".toSlice())) {
             } else if (tagname.endsWith("h".toSlice())) {
-                headers = spart;
+                signatureHeaders = spart;
             }
         }
     }
 
-    function parseHeader(strings.slice value) private pure returns (strings.slice[]) {
+    function parseTagHeader(strings.slice value) private pure returns (strings.slice[]) {
         var delim = ":".toSlice();
-        var headers = new strings.slice[](value.count(delim) + 1);
-        for(uint i = 0; i < headers.length; i++) {
-            headers[i] = value.split(delim);
+        var tagheaders = new strings.slice[](value.count(delim) + 2);
+        for(uint i = 0; i < tagheaders.length; i++) {
+            tagheaders[i] = value.split(delim);
         }
-        return headers;
+        tagheaders[tagheaders.length - 1] = "dkim-signature".toSlice();
+        return tagheaders;
     }
 
     function processBody(strings.slice message, strings.slice method) internal pure returns (
@@ -63,11 +94,13 @@ contract DKIM {
         if (method.equals("relaxed".toSlice())) {
             // Ignore all whitespace at the end of lines.
             while (message.contains("\x20\r\n".toSlice())) {
-                var h = message.split("\x20\r\n".toSlice());
-                message = h.concat(crlf).toSlice().concat(message).toSlice();
+                message = message.split("\x20\r\n".toSlice()).concat(crlf).toSlice().concat(message).toSlice();
             }
 
             // Reduce all sequences of WSP within a line to a single SP
+            while (message.contains("\x20\x20".toSlice())) {
+                message = message.split("\x20\x20".toSlice()).concat("\x20".toSlice()).toSlice().concat(message).toSlice();
+            }
         }
 
         // Ignore all empty lines at the end of the message body.
@@ -78,73 +111,95 @@ contract DKIM {
         return message.toString();
     }
 
-    function getHeader(strings.slice allHeaders, strings.slice name) internal pure returns (
-        strings.slice
+    function processHeader(strings.slice signatureHeaders, strings.slice method) internal view returns (
+        string
     ) {
+        var crlf = "\r\n".toSlice();
+        var colon = ":".toSlice();
+        var tagHeader = parseTagHeader(signatureHeaders);
+        var processedHeader = new strings.slice[](tagHeader.length);
+
+        for (uint j = 0; j < tagHeader.length; j++) {
+            var value = headers[keccak256(tagHeader[j].toString())].copy();
+            var name = _toLower(value.split(colon).toString()).toSlice();
+
+            // Unfold all header field continuation lines
+            while (value.contains(crlf)) {
+                value = value.split(crlf).concat(value).toSlice();
+            }
+            // Convert all sequences of one or more WSP characters to a single SP
+            while (value.contains("\x20\x20".toSlice())) {
+                var line = value.split("\x20\x20".toSlice());
+                value = line.concat("\x20".toSlice()).toSlice().concat(value).toSlice();
+            }
+            // Remove any WSP characters remaining before and after the colon
+            while (value.startsWith("\x20".toSlice())) {
+                value._len -= 1;
+                value._ptr += 1;
+            }
+
+            // Remove signature value for "dkim-signature" header
+            var p1 = value.split("b=".toSlice());
+            if (value.empty()) {
+                value = p1;
+            } else {
+                p1._len += 2;
+                value.split(";".toSlice());
+                value = p1.concat(value).toSlice();
+            }
+
+            var h = new strings.slice[](2);
+            h[0] = name;
+            h[1] = value;
+            processedHeader[j] = colon.join(h).toSlice();
+        }
+
+        return crlf.join(processedHeader);
+    }
+
+    function getLen(string memory text) public returns (string) {
+        body = text.toSlice();
+        var allHeaders = body.split("\r\n\r\n".toSlice());
+
         var delim = "\r\n".toSlice();
+        var colon = ":".toSlice();
+        var sp = "\x20".toSlice();
+        // var tab = "\x09".toSlice();
+
         var count = allHeaders.count(delim) + 1;
+        var headerName = "".toSlice();
+        var headerValue = headerName.copy();
         for(uint i = 0; i < count; i++) {
             var part = allHeaders.split(delim);
-            var lowercase = _toLower(part.toString()).toSlice();
-            if (lowercase.startsWith(name)) {
-                var value = part;
-                for (i = i + 1; i < count; i++) {
-                    var part2 = allHeaders.split(delim);
-                    if (part2.startsWith("\x20".toSlice())) {
-                        value = value.concat(delim).toSlice().concat(part2).toSlice();
-                    } else {
-                        return value;
-                    }
+            if (part.startsWith(sp)) {
+                // headerValue = headerValue.concat(delim).toSlice().concat(part).toSlice();
+                headerValue._len += delim._len + part._len;
+            } else {
+                if (!headerName.empty()) {
+                    headers[keccak256(_toLower(headerName.toString()))] = headerValue;
                 }
+                headerName = part.copy().split(colon);
+                headerValue = part;
             }
         }
-        return "".toSlice();
+
+        var (,,,,,,signatureHeaders) = parseSignature(headers[keccak256("dkim-signature")]);
+
+        // bytes32 h = sha256(bytes(processBody(body, body)));
+        var processedHeader = processHeader(signatureHeaders, signatureHeaders);
+
+        return processedHeader;
     }
 
-    function getLen(string memory value) public returns (bytes32) {
-        var body = value.toSlice();
-        var header = body.split("\r\n\r\n".toSlice());
-        var allHeader = header.copy();
-        // return getHeader(allHeader, _toLower("DKIM-Signature").toSlice()).toString();
-        var delim = "\r\n".toSlice();
-        var count = header.count(delim) + 1;
-        for(uint i = 0; i < count; i++) {
-            var part = header.split(delim);
-            if (part.startsWith("DKIM-Signature".toSlice())) {
-                var signature = part;
-                for (i = i + 1; i < count; i++) {
-                    var part2 = header.split(delim);
-                    if (part2.startsWith("\x20".toSlice())) {
-                        signature = signature.concat(part2).toSlice();
-                    } else {
-                        var (,,,,,,ha) = parse(signature);
-
-                        // hash
-                        bytes32 h = sha256(bytes(processBody(body, body)));
-                        return h;
-                        
-                        // var headers = parseHeader(h);
-                        // for (uint j = 0; j < headers.length; j++) {
-                        //     headers[j] = getHeader(allHeader.copy(), headers[j]);
-                        // }
-                        // return headers[0].toString();
-                        // var count3 = header3.count(delim) + 1;
-                        // for(uint i3 = 0; i3 < count; i3++) {
-                        //     var part3 = header3.split(delim);
-                        //     var headerName = _toLower(part3.split(":".toSlice()).toString());
-                        //     for (uint j3 = 0; j3 < headers.length; j3++) {
-                        //         if (headers[j3].equals(headerName.toSlice())) {
-                        //             headers[j3] = part3;
-                        //         }
-                        //     }
-
-                        // }
-                    }
-                }
-            }
-        }
-        return "notfound";
-    }
+    function mLower(bytes bStr, uint len) internal pure {
+		for (uint i = 0; i < len; i++) {
+			// Uppercase character...
+			if ((bStr[i] >= 65) && (bStr[i] <= 90)) {
+				// So we add 32 to make it lowercase
+				bStr[i] = bytes1(int(bStr[i]) + 32);
+			}
+		}
+	}
 
     function _toLower(string str) internal pure returns (string) {
 		bytes memory bStr = bytes(str);

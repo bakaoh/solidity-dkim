@@ -12,7 +12,9 @@ contract("DKIM", function([_, registryFunder, creator, operator]) {
   });
 
   it("return len", async function() {
-    (await this.dkim.getLen(message.toString())).should.be.equal("228");
+    let x = (await this.dkim.getLen.call(message.toString()));
+    console.log(JSON.stringify(x));
+    x.should.be.equal("228");
   });
 
   // it('has a symbol', async function () {

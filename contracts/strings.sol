@@ -235,6 +235,24 @@ library strings {
         return compare(self, other) == 0;
     }
 
+    // // Same as above, but accomplish the entire code within inline assembly.
+    // function lower(slice memory self, uint len) internal pure returns (slice memory) {
+    //     bytes32 word;
+    //     assembly {
+    //         word := mload(add(self, 32))
+    //         // for
+    //         //     { let i := 0 }
+    //         //     lt(i, len)
+    //         //     { i := add(i, 1) }
+    //         // {
+    //         //     if gt(byte(i, word), 64) { byte(i, word) := add(byte(i, word), 32) }
+    //         //     mstore(add(self, 32), word)
+    //         // }
+    //     }
+    //     for ()
+    //     return self;
+    // }
+
     /*
      * @dev Extracts the first rune in the slice into `rune`, advancing the
      *      slice to point to the next rune and returning `self`.
