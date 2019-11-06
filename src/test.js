@@ -200,4 +200,11 @@ console.log("verified", verified);
 // var test = 'AwEAAXxsMmN/JgpEE9Y4uFNRJm7Q9GBwmEYUCsCxuKlgBU9WrQEFRrvAeMamUBeX4SE8s3V/TEk/TgGmPPp0pMkKD7mseluK6Ard2HZ6O3nPAzL4i8py/UDRUmYNSCxwfdfjUWRmcB9H+NKWMsJoDhAkLFqg5HS7f0j4Vb99Wac24Fk7';
 // console.log(dnskey[0].to_digestable().encode('hex'));
 
-console.log(Buffer.from(processedHeader,'utf8').toString('hex'))
+// console.log(Buffer.from(processedHeader,'utf8').toString('hex'))
+
+console.log(Buffer.from("Y3kwptsKTOHCqiQenR9ptJ7blxDYtJbi+0+uYn+Aw8LC6Kk9OkczBzzjFPHXWGa//q" +
+"K6V0kufbCZ0YPEkU14b0ZIexVFIbIiI7TAPOTDZzrMPEjkhh1D9nKsl3gt120eyli2Hf" +
+"/IkGCnHcKW87+Qipt68pjd39cD+zun3VSdcXD/vvkvhchNdjvDVwyRzJN2xMbVzQ33cR" +
+"SA/5ZZEAnhrk2w1+tY5Mldel7HOJI0sICOUXOBQQUumY9Z9lKlUs0vXadByNzlJO3S+U" +
+"onH3xTIzUc5uB/5Zoga4QBLdeDUUlSBPM6QaYc3NDi7nrnqPfalkVBa+jMLYQpXUfx6/" +
+"mfNg==", "base64").toString('hex'));
