@@ -126,7 +126,7 @@ contract DKIM is RSASHA256Algorithm{
         return message.toString();
     }
 
-    function processHeader(H[] memory newH, strings.slice signatureHeaders, strings.slice method) internal view returns (
+    function processHeader(H[] memory newH, strings.slice signatureHeaders, strings.slice method) internal pure returns (
         string
     ) {
         var crlf = "\r\n".toSlice();
@@ -185,7 +185,7 @@ contract DKIM is RSASHA256Algorithm{
     }
 
 
-    function getH(H[] memory newH, string memory name) internal returns (strings.slice) {
+    function getH(H[] memory newH, string memory name) internal pure returns (strings.slice) {
         var hn = _toLower(name).toSlice();
         for (uint i = 0; i < newH.length; i++) {
             if (newH[i].name.equals(hn)) return newH[i].all;
@@ -213,24 +213,25 @@ contract DKIM is RSASHA256Algorithm{
 
     function getLen(string memory text) public returns (bool) {
         var (headers, body) = parse(text.toSlice());
-
         var (d, s, c, a, h, b, bh) = parseSignature(getH(headers, "dkim-signature").copy());
+
         bytes32 digest = sha256(bytes(processBody(body, c)));
         if (Base64.decode(bh.toString()).readBytes32(0) != digest) return false;
 
         var processedHeader = processHeader(headers, h, c);
-        var crlf = "\r\n".toSlice();
+        return true;
+        // var crlf = "\r\n".toSlice();
         
-        while (b.contains(crlf)) {
-            b = b.split(crlf).concat(b).toSlice();
-        }
-        while (b.contains("\x20".toSlice())) {
-            b = b.split("\x20".toSlice()).concat(b).toSlice();
-        }
-        return verify(modulus, exponent, bytes(processedHeader), Base64.decode(b.toString()));
+        // while (b.contains(crlf)) {
+        //     b = b.split(crlf).concat(b).toSlice();
+        // }
+        // while (b.contains("\x20".toSlice())) {
+        //     b = b.split("\x20".toSlice()).concat(b).toSlice();
+        // }
+        // return verify(modulus, exponent, bytes(processedHeader), Base64.decode(b.toString()));
     }
 
-    function parse(strings.slice memory all) internal returns (H[] memory, strings.slice) {
+    function parse(strings.slice memory all) internal pure returns (H[] memory, strings.slice) {
         strings.slice memory crlf = "\r\n".toSlice();
         strings.slice memory colon = ":".toSlice();
         strings.slice memory sp = "\x20".toSlice();
@@ -264,16 +265,11 @@ contract DKIM is RSASHA256Algorithm{
 
     function _toLower(string str) internal pure returns (string) {
 		bytes memory bStr = bytes(str);
-		bytes memory bLower = new bytes(bStr.length);
 		for (uint i = 0; i < bStr.length; i++) {
-			// Uppercase character...
 			if ((bStr[i] >= 65) && (bStr[i] <= 90)) {
-				// So we add 32 to make it lowercase
-				bLower[i] = bytes1(int(bStr[i]) + 32);
-			} else {
-				bLower[i] = bStr[i];
+				bStr[i] = bytes1(int(bStr[i]) + 32);
 			}
 		}
-		return string(bLower);
+		return string(bStr);
 	}
 }
