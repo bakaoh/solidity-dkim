@@ -731,4 +731,32 @@ library strings {
 
         return ret;
     }
+
+    function joinNoEmpty(slice memory self, slice[] memory parts) internal pure returns (string memory) {
+        if (parts.length == 0)
+            return "";
+
+        uint length = 0;
+        for(uint i = 0; i < parts.length; i++)
+            if (parts[i]._len > 0) {
+                length += self._len + parts[i]._len;
+            }
+        length -= self._len;
+
+        string memory ret = new string(length);
+        uint retptr;
+        assembly { retptr := add(ret, 32) }
+
+        for(i = 0; i < parts.length; i++) {
+            if (parts[i]._len == 0) continue;
+            memcpy(retptr, parts[i]._ptr, parts[i]._len);
+            retptr += parts[i]._len;
+            if (i < parts.length - 1) {
+                memcpy(retptr, self._ptr, self._len);
+                retptr += self._len;
+            }
+        }
+
+        return ret;
+    }
 }

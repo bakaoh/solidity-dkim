@@ -126,6 +126,47 @@ contract DKIM is RSASHA256Algorithm{
         return message.toString();
     }
 
+
+    function trim(strings.slice self) internal pure returns (strings.slice) {
+        while (self.startsWith("\x20".toSlice()) || self.startsWith("\x09".toSlice())) {
+            self._len -= 1;
+            self._ptr += 1;
+        }
+        return self;
+        // uint word;
+        // assembly { word:= mload(mload(add(self, 32))) }
+        // for (uint j = 0; j < 32; j++) {
+        //     byte b = byte(bytes32(uint(word) * 2 ** (8 * j)));
+        //         if (b == 0x20 || b == 0x09) {
+        //             self._ptr++;
+        //             self._len--;
+        //         } else break;
+        // }
+        // return self;
+    }
+
+    function unfold(strings.slice value) internal pure returns (strings.slice) {
+        var delim = "\r\n".toSlice();
+        var count = value.count(delim);
+        if (count == 0) return value;
+        var tagheaders = new strings.slice[](count + 1);
+        for(uint i = 0; i < tagheaders.length; i++) {
+            tagheaders[i] = value.split(delim);
+        }
+        return "".toSlice().join(tagheaders).toSlice();
+    }
+
+    function removeWSPSequences(strings.slice value) internal pure returns (strings.slice) {
+        var sp = "\x20".toSlice();
+        var scount = value.count(sp);
+        if (scount == 0) return value;
+        var sparts = new strings.slice[](scount + 1);
+        for(uint j = 0; j < sparts.length; j++) {
+            sparts[j] = value.split(sp);
+        }
+        return sp.joinNoEmpty(sparts).toSlice();
+    }
+
     function processHeader(H[] memory newH, strings.slice signatureHeaders, strings.slice method) internal pure returns (
         string
     ) {
@@ -138,21 +179,6 @@ contract DKIM is RSASHA256Algorithm{
             var value = getH(newH, tagHeader[j].toString()).copy();
             var name = _toLower(value.split(colon).toString()).toSlice();
 
-            // Unfold all header field continuation lines
-            while (value.contains(crlf)) {
-                value = value.split(crlf).concat(value).toSlice();
-            }
-            // Convert all sequences of one or more WSP characters to a single SP
-            while (value.contains("\x20\x20".toSlice())) {
-                var line = value.split("\x20\x20".toSlice());
-                value = line.concat("\x20".toSlice()).toSlice().concat(value).toSlice();
-            }
-            // Remove any WSP characters remaining before and after the colon
-            while (value.startsWith("\x20".toSlice())) {
-                value._len -= 1;
-                value._ptr += 1;
-            }
-
             // Remove signature value for "dkim-signature" header
             var p1 = value.split("b=".toSlice());
             if (value.empty()) {
@@ -162,6 +188,18 @@ contract DKIM is RSASHA256Algorithm{
                 value.split(";".toSlice());
                 value = p1.concat(value).toSlice();
             }
+
+            // Unfold all header field continuation lines
+            value = unfold(value);
+            // Convert all sequences of one or more WSP characters to a single SP
+            value = removeWSPSequences(value);
+            // Remove any WSP characters remaining before and after the colon
+            while (value.startsWith("\x20".toSlice())) {
+                value._len -= 1;
+                value._ptr += 1;
+            }
+
+            
 
             var h = new strings.slice[](2);
             h[0] = name;
@@ -193,42 +231,24 @@ contract DKIM is RSASHA256Algorithm{
         return "".toSlice();
     }
 
-    function trim(strings.slice self) internal pure returns (strings.slice) {
-         while (self.startsWith("\x20".toSlice()) || self.startsWith("\x09".toSlice())) {
-                self._len -= 1;
-                self._ptr += 1;
-            }
-        return self;
-        // uint word;
-        // assembly { word:= mload(mload(add(self, 32))) }
-        // for (uint j = 0; j < 32; j++) {
-        //     byte b = byte(bytes32(uint(word) * 2 ** (8 * j)));
-        //         if (b == 0x20 || b == 0x09) {
-        //             self._ptr++;
-        //             self._len--;
-        //         } else break;
-        // }
-        // return self;
-    }
-
-    function getLen(string memory text) public returns (bool) {
-        var (headers, body) = parse(text.toSlice());
+    function getLen(string memory raw) public returns (bool) {
+        var (headers, body) = parse(raw.toSlice());
         var (d, s, c, a, h, b, bh) = parseSignature(getH(headers, "dkim-signature").copy());
 
         bytes32 digest = sha256(bytes(processBody(body, c)));
         if (Base64.decode(bh.toString()).readBytes32(0) != digest) return false;
 
         var processedHeader = processHeader(headers, h, c);
-        return true;
-        // var crlf = "\r\n".toSlice();
+
+        var crlf = "\r\n".toSlice();
         
-        // while (b.contains(crlf)) {
-        //     b = b.split(crlf).concat(b).toSlice();
-        // }
-        // while (b.contains("\x20".toSlice())) {
-        //     b = b.split("\x20".toSlice()).concat(b).toSlice();
-        // }
-        // return verify(modulus, exponent, bytes(processedHeader), Base64.decode(b.toString()));
+        while (b.contains(crlf)) {
+            b = b.split(crlf).concat(b).toSlice();
+        }
+        while (b.contains("\x20".toSlice())) {
+            b = b.split("\x20".toSlice()).concat(b).toSlice();
+        }
+        return verify(modulus, exponent, bytes(processedHeader), Base64.decode(b.toString()));
     }
 
     function parse(strings.slice memory all) internal pure returns (H[] memory, strings.slice) {
