@@ -50,8 +50,6 @@ contract RSASHA256Algorithm {
 contract DKIM is RSASHA256Algorithm{
     using strings for *;
 
-    mapping(bytes32 => strings.slice) public headers;
-
     function DKIM() public {
     }
 
@@ -186,33 +184,6 @@ contract DKIM is RSASHA256Algorithm{
         strings.slice all;
     }
 
-    function parse(strings.slice memory allHeaders) internal returns (H[]) {
-        var delim = "\r\n".toSlice();
-        var colon = ":".toSlice();
-        var sp = "\x20".toSlice();
-        // var tab = "\x09".toSlice();
-
-        var headerName = "".toSlice();
-        var headerValue = headerName.copy();
-        H[] memory newH = new H[](30);
-        uint i = 0;
-        while (!allHeaders.empty()) {
-            var part = allHeaders.split(delim);
-            if (part.startsWith(sp)) {
-                // headerValue = headerValue.concat(delim).toSlice().concat(part).toSlice();
-                headerValue._len += delim._len + part._len;
-            } else {
-                if (!headerName.empty()) {
-                    newH[i] = H(_toLower(headerName.toString()).toSlice(), headerValue);
-                    i++;
-                    // headers[keccak256(_toLower(headerName.toString()))] = headerValue;
-                }
-                headerName = part.copy().split(colon);
-                headerValue = part;
-            }
-        }
-        return newH;
-    }
 
     function getH(H[] memory newH, string memory name) internal returns (strings.slice) {
         var hn = _toLower(name).toSlice();
@@ -222,16 +193,32 @@ contract DKIM is RSASHA256Algorithm{
         return "".toSlice();
     }
 
+    function trim(strings.slice self) internal pure returns (strings.slice) {
+         while (self.startsWith("\x20".toSlice()) || self.startsWith("\x09".toSlice())) {
+                self._len -= 1;
+                self._ptr += 1;
+            }
+        return self;
+        // uint word;
+        // assembly { word:= mload(mload(add(self, 32))) }
+        // for (uint j = 0; j < 32; j++) {
+        //     byte b = byte(bytes32(uint(word) * 2 ** (8 * j)));
+        //         if (b == 0x20 || b == 0x09) {
+        //             self._ptr++;
+        //             self._len--;
+        //         } else break;
+        // }
+        // return self;
+    }
+
     function getLen(string memory text) public returns (bool) {
-        var body = text.toSlice();
-        var allHeaders = body.split("\r\n\r\n".toSlice());
-        H[] memory newH = parse(allHeaders);
-        // return true;
-        var (d, s, c, a, h, b, bh) = parseSignature(getH(newH, "dkim-signature").copy());
+        var (headers, body) = parse(text.toSlice());
+
+        var (d, s, c, a, h, b, bh) = parseSignature(getH(headers, "dkim-signature").copy());
         bytes32 digest = sha256(bytes(processBody(body, c)));
         if (Base64.decode(bh.toString()).readBytes32(0) != digest) return false;
 
-        var processedHeader = processHeader(newH, h, c);
+        var processedHeader = processHeader(headers, h, c);
         var crlf = "\r\n".toSlice();
         
         while (b.contains(crlf)) {
@@ -241,6 +228,38 @@ contract DKIM is RSASHA256Algorithm{
             b = b.split("\x20".toSlice()).concat(b).toSlice();
         }
         return verify(modulus, exponent, bytes(processedHeader), Base64.decode(b.toString()));
+    }
+
+    function parse(strings.slice memory all) internal returns (H[] memory, strings.slice) {
+        strings.slice memory crlf = "\r\n".toSlice();
+        strings.slice memory colon = ":".toSlice();
+        strings.slice memory sp = "\x20".toSlice();
+        strings.slice memory tab = "\x09".toSlice();
+
+        H[] memory headers = new H[](30);
+        uint i = 0;
+        strings.slice memory headerName = strings.slice(0, 0);
+        strings.slice memory headerValue = strings.slice(0, 0);
+        while (!all.empty()) {
+            var part = all.split(crlf);
+            if (part.startsWith(sp) || part.startsWith(tab)) {
+                headerValue._len += crlf._len + part._len;
+            } else {
+                if (!headerName.empty()) {
+                    headers[i] = H(_toLower(headerName.toString()).toSlice(), headerValue);
+                    i++;
+                }
+                headerName = part.copy().split(colon);
+                headerValue = part;
+            }
+
+            if (all.startsWith(crlf)) {
+                all._len -= 2;
+                all._ptr += 2;
+                return (headers, all);
+            }
+        }
+        revert("No header boundary found");
     }
 
     function _toLower(string str) internal pure returns (string) {
