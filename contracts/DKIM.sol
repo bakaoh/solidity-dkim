@@ -72,9 +72,7 @@ contract DKIM is RSASHA256Algorithm{
     ) {
         signature.split(": ".toSlice());
         var sdelim = ";".toSlice();
-        var scount = signature.count(sdelim) + 1;
-
-        for (uint j = 0; j < scount; j++) {
+        while (!signature.empty()) {
             var spart = signature.split(sdelim);
             var tagname = spart.split("=".toSlice());
             if (tagname.endsWith("d".toSlice())) {
@@ -130,7 +128,7 @@ contract DKIM is RSASHA256Algorithm{
         return message.toString();
     }
 
-    function processHeader(H[] newH, strings.slice signatureHeaders, strings.slice method) internal view returns (
+    function processHeader(H[] memory newH, strings.slice signatureHeaders, strings.slice method) internal view returns (
         string
     ) {
         var crlf = "\r\n".toSlice();
@@ -194,11 +192,11 @@ contract DKIM is RSASHA256Algorithm{
         var sp = "\x20".toSlice();
         // var tab = "\x09".toSlice();
 
-        var count = allHeaders.count(delim) + 1;
         var headerName = "".toSlice();
         var headerValue = headerName.copy();
-        H[] memory newH = new H[](count);
-        for(uint i = 0; i < count; i++) {
+        H[] memory newH = new H[](30);
+        uint i = 0;
+        while (!allHeaders.empty()) {
             var part = allHeaders.split(delim);
             if (part.startsWith(sp)) {
                 // headerValue = headerValue.concat(delim).toSlice().concat(part).toSlice();
@@ -206,6 +204,7 @@ contract DKIM is RSASHA256Algorithm{
             } else {
                 if (!headerName.empty()) {
                     newH[i] = H(_toLower(headerName.toString()).toSlice(), headerValue);
+                    i++;
                     // headers[keccak256(_toLower(headerName.toString()))] = headerValue;
                 }
                 headerName = part.copy().split(colon);
@@ -226,14 +225,15 @@ contract DKIM is RSASHA256Algorithm{
     function getLen(string memory text) public returns (bool) {
         var body = text.toSlice();
         var allHeaders = body.split("\r\n\r\n".toSlice());
-        var newH = parse(allHeaders);
-
+        H[] memory newH = parse(allHeaders);
+        // return true;
         var (d, s, c, a, h, b, bh) = parseSignature(getH(newH, "dkim-signature").copy());
         bytes32 digest = sha256(bytes(processBody(body, c)));
         if (Base64.decode(bh.toString()).readBytes32(0) != digest) return false;
 
         var processedHeader = processHeader(newH, h, c);
         var crlf = "\r\n".toSlice();
+        
         while (b.contains(crlf)) {
             b = b.split(crlf).concat(b).toSlice();
         }
