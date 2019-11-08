@@ -71,21 +71,22 @@ library Algorithm {
 contract DKIM {
     using strings for *;
 
-    struct H {
-        strings.slice name;
-        strings.slice all;
+    struct Headers {
+        uint len;
+        strings.slice[] name;
+        strings.slice[] value;
     }
 
-    function getH(H[] memory headers, string memory name) internal pure returns (strings.slice memory) {
+    function getHeader(Headers memory headers, string memory name) internal pure returns (strings.slice memory) {
         strings.slice memory headerName = toLowercase(name).toSlice();
-        for (uint i = 0; i < headers.length; i++) {
-            if (headers[i].name.equals(headerName)) return headers[i].all.copy();
+        for (uint i = 0; i < headers.len; i++) {
+            if (headers.name[i].equals(headerName)) return headers.value[i].copy();
         }
         revert("Header not found");
     }
 
     function getLen(string memory raw) public returns (bool) {
-        (H[] memory headers, strings.slice memory body) = parse(raw.toSlice());
+        (Headers memory headers, strings.slice memory body) = parse(raw.toSlice());
         (strings.slice memory d,
         strings.slice memory s,
         strings.slice memory c,
@@ -121,7 +122,7 @@ contract DKIM {
         exponent1 = hex"010001";
     }
 
-    function verifyKey(H[] memory headers, strings.slice h, strings.slice c, strings.slice a, strings.slice b) internal view returns (bool) {
+    function verifyKey(Headers memory headers, strings.slice h, strings.slice c, strings.slice a, strings.slice b) internal view returns (bool) {
         string memory processedHeader = processHeader(headers, h, c.split("/".toSlice()));
         a = a.copy();
         strings.slice memory keyAlgo = a.split("-".toSlice());
@@ -138,14 +139,13 @@ contract DKIM {
         return true;
     }
 
-    function parse(strings.slice memory all) internal pure returns (H[] memory, strings.slice) {
+    function parse(strings.slice memory all) internal pure returns (Headers memory, strings.slice memory) {
         strings.slice memory crlf = "\r\n".toSlice();
         strings.slice memory colon = ":".toSlice();
         strings.slice memory sp = "\x20".toSlice();
         strings.slice memory tab = "\x09".toSlice();
 
-        H[] memory headers = new H[](30);
-        uint i = 0;
+        Headers memory headers = Headers(0, new strings.slice[](30), new strings.slice[](30));
         strings.slice memory headerName = strings.slice(0, 0);
         strings.slice memory headerValue = strings.slice(0, 0);
         while (!all.empty()) {
@@ -154,8 +154,9 @@ contract DKIM {
                 headerValue._len += crlf._len + part._len;
             } else {
                 if (!headerName.empty()) {
-                    headers[i] = H(toLowercase(headerName.toString()).toSlice(), headerValue);
-                    i++;
+                    headers.name[headers.len] = toLowercase(headerName.toString()).toSlice();
+                    headers.value[headers.len] = headerValue;
+                    headers.len++;
                 }
                 headerName = part.copy().split(colon);
                 headerValue = part;
@@ -170,7 +171,7 @@ contract DKIM {
         revert("No header boundary found");
     }
 
-    function parseHeaderParams(H[] memory headers) internal pure returns (
+    function parseHeaderParams(Headers memory headers) internal pure returns (
         strings.slice d,
         strings.slice s,
         strings.slice c,
@@ -179,7 +180,7 @@ contract DKIM {
         strings.slice b,
         strings.slice bh
     ) {
-        strings.slice memory signature = getH(headers, "dkim-signature");
+        strings.slice memory signature = getHeader(headers, "dkim-signature");
         strings.slice memory sc = ";".toSlice();
         strings.slice memory eq = "=".toSlice();
 
@@ -215,7 +216,7 @@ contract DKIM {
         return message.toString();
     }
 
-    function processHeader(H[] memory headers, strings.slice memory h, strings.slice memory method) internal pure returns (string) {
+    function processHeader(Headers memory headers, strings.slice memory h, strings.slice memory method) internal pure returns (string) {
         strings.slice memory crlf = "\r\n".toSlice();
         strings.slice memory colon = ":".toSlice();
         strings.slice[] memory tags = parseTagList(h);
@@ -223,7 +224,7 @@ contract DKIM {
         bool isSimple = method.equals("simple".toSlice());
 
         for (uint j = 0; j < tags.length; j++) {
-            strings.slice memory value = getH(headers, tags[j].toString());
+            strings.slice memory value = getHeader(headers, tags[j].toString());
             if (isSimple) {
                 processedHeader[j] = value;
                 continue;
