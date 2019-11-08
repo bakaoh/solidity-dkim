@@ -60,7 +60,6 @@ contract DKIM {
                 
         require(verifyBodyHash(body, sigTags), "body hash did not verify");
         require(verifySignature(headers, sigTags), "signature did not verify");
-        
         return true;
     }
 
@@ -172,12 +171,15 @@ contract DKIM {
     function processHeader(Headers memory headers, strings.slice memory h, strings.slice memory method) internal pure returns (string) {
         strings.slice memory crlf = "\r\n".toSlice();
         strings.slice memory colon = ":".toSlice();
-        strings.slice[] memory tags = parseTagList(h);
+        strings.slice[] memory tags = parseSigHTag(h);
         strings.slice[] memory processedHeader = new strings.slice[](tags.length);
         bool isSimple = method.equals("simple".toSlice());
 
         for (uint j = 0; j < tags.length; j++) {
+            if (tags[j].empty()) continue;
             strings.slice memory value = getHeader(headers, tags[j].toString());
+            if (value.empty()) continue;
+
             if (isSimple) {
                 processedHeader[j] = value;
                 continue;
@@ -208,14 +210,17 @@ contract DKIM {
             processedHeader[j] = colon.join(parts).toSlice();
         }
 
-        return crlf.join(processedHeader);
+        return joinNoEmpty(crlf, processedHeader);
     }
 
-    function parseTagList(strings.slice memory value) internal pure returns (strings.slice[]) {
+    function parseSigHTag(strings.slice memory value) internal pure returns (strings.slice[]) {
         strings.slice memory colon = ":".toSlice();
         strings.slice[] memory list = new strings.slice[](value.count(colon) + 2);
         for(uint i = 0; i < list.length; i++) {
-            list[i] = trim(value.split(colon));
+            strings.slice memory h = trim(value.split(colon));
+            uint j = 0;
+            for (; j < i; j++) if (list[j].equals(h)) break;
+            if (j == i) list[i] = h;
         }
         list[list.length - 1] = "dkim-signature".toSlice();
         return list;
@@ -227,7 +232,7 @@ contract DKIM {
         for (uint i = 0; i < headers.len; i++) {
             if (headers.name[i].equals(headerName)) return headers.value[i].copy();
         }
-        revert("Header not found");
+        return strings.slice(0, 0);
     }
 
     function toLowercase(string str) internal pure returns (string) {
@@ -283,6 +288,14 @@ contract DKIM {
         strings.slice[] memory parts = new strings.slice[](count + 1);
         for(uint j = 0; j < parts.length; j++) {
             parts[j] = value.split(sp);
+        }
+        value = joinNoEmpty(sp, parts).toSlice();
+        strings.slice memory tab = "\x09".toSlice();
+        count = value.count(tab);
+        if (count == 0) return value;
+        parts = new strings.slice[](count + 1);
+        for(j = 0; j < parts.length; j++) {
+            parts[j] = value.split(tab);
         }
         return joinNoEmpty(sp, parts).toSlice();
     }
