@@ -245,6 +245,14 @@ contract DKIM {
 		return string(bStr);
 	}
 
+    function tabToSp(string str) internal pure returns (string) {
+		bytes memory bStr = bytes(str);
+		for (uint i = 0; i < bStr.length; i++) {
+			if (bStr[i] == 0x09) bStr[i] = 0x20;
+		}
+		return string(bStr);
+	}
+
     function trim(strings.slice memory self) internal pure returns (strings.slice) {
         strings.slice memory sp = "\x20".toSlice();
         strings.slice memory tab = "\x09".toSlice();
@@ -267,10 +275,10 @@ contract DKIM {
     }
 
     function removeSPAtEndOfLines(strings.slice memory value) internal pure returns (strings.slice) {
+        if (!value.contains("\x20\r\n".toSlice())) return value;
         strings.slice memory sp = "\x20".toSlice();
         strings.slice memory crlf = "\r\n".toSlice();
         uint count = value.count(crlf);
-        if (count == 0) return value;
         strings.slice[] memory parts = new strings.slice[](count + 1);
         for(uint j = 0; j < parts.length; j++) {
             parts[j] = value.split(crlf);
@@ -282,20 +290,14 @@ contract DKIM {
     }
 
     function removeWSPSequences(strings.slice memory value) internal pure returns (strings.slice) {
+        bool containsTab = value.contains("\x09".toSlice());
+        if (!value.contains("\x20\x20".toSlice()) && !containsTab) return value;
+        if (containsTab) value = tabToSp(value.toString()).toSlice();
         strings.slice memory sp = "\x20".toSlice();
         uint count = value.count(sp);
-        if (count == 0) return value;
         strings.slice[] memory parts = new strings.slice[](count + 1);
         for(uint j = 0; j < parts.length; j++) {
             parts[j] = value.split(sp);
-        }
-        value = joinNoEmpty(sp, parts).toSlice();
-        strings.slice memory tab = "\x09".toSlice();
-        count = value.count(tab);
-        if (count == 0) return value;
-        parts = new strings.slice[](count + 1);
-        for(j = 0; j < parts.length; j++) {
-            parts[j] = value.split(tab);
         }
         return joinNoEmpty(sp, parts).toSlice();
     }
