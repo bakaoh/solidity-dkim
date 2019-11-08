@@ -52,7 +52,7 @@ contract DKIM {
         strings.slice bh;
     }
 
-    function getLen(string memory raw) public view returns (bool) {
+    function verify(string memory raw) public view returns (bool) {
         (Headers memory headers, strings.slice memory body) = parse(raw.toSlice());
 
         strings.slice memory dkimSig = getHeader(headers, "dkim-signature");
