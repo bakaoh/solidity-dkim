@@ -235,24 +235,6 @@ library strings {
         return compare(self, other) == 0;
     }
 
-    // // Same as above, but accomplish the entire code within inline assembly.
-    // function lower(slice memory self, uint len) internal pure returns (slice memory) {
-    //     bytes32 word;
-    //     assembly {
-    //         word := mload(add(self, 32))
-    //         // for
-    //         //     { let i := 0 }
-    //         //     lt(i, len)
-    //         //     { i := add(i, 1) }
-    //         // {
-    //         //     if gt(byte(i, word), 64) { byte(i, word) := add(byte(i, word), 32) }
-    //         //     mstore(add(self, 32), word)
-    //         // }
-    //     }
-    //     for ()
-    //     return self;
-    // }
-
     /*
      * @dev Extracts the first rune in the slice into `rune`, advancing the
      *      slice to point to the next rune and returning `self`.
@@ -721,34 +703,6 @@ library strings {
         assembly { retptr := add(ret, 32) }
 
         for(i = 0; i < parts.length; i++) {
-            memcpy(retptr, parts[i]._ptr, parts[i]._len);
-            retptr += parts[i]._len;
-            if (i < parts.length - 1) {
-                memcpy(retptr, self._ptr, self._len);
-                retptr += self._len;
-            }
-        }
-
-        return ret;
-    }
-
-    function joinNoEmpty(slice memory self, slice[] memory parts) internal pure returns (string memory) {
-        if (parts.length == 0)
-            return "";
-
-        uint length = 0;
-        for(uint i = 0; i < parts.length; i++)
-            if (parts[i]._len > 0) {
-                length += self._len + parts[i]._len;
-            }
-        length -= self._len;
-
-        string memory ret = new string(length);
-        uint retptr;
-        assembly { retptr := add(ret, 32) }
-
-        for(i = 0; i < parts.length; i++) {
-            if (parts[i]._len == 0) continue;
             memcpy(retptr, parts[i]._ptr, parts[i]._len);
             retptr += parts[i]._len;
             if (i < parts.length - 1) {

@@ -1,72 +1,7 @@
 pragma solidity ^0.4.24;
 
 import "./utils/Strings.sol";
-import "./utils/BytesUtils.sol";
-import "./utils/Buffer.sol";
-import "./utils/Base64.sol";
-import "@ensdomains/solsha1/contracts/SHA1.sol";
-
-library Algorithm {
-    using BytesUtils for *;
-    using Buffer for *;
-
-    /**
-    * @dev Computes (base ^ exponent) % modulus over big numbers.
-    */
-    function modexp(bytes memory base, bytes memory exponent, bytes memory modulus) internal view returns (bool success, bytes memory output) {
-        uint size = (32 * 3) + base.length + exponent.length + modulus.length;
-
-        Buffer.buffer memory input;
-        input.init(size);
-
-        input.appendBytes32(bytes32(base.length));
-        input.appendBytes32(bytes32(exponent.length));
-        input.appendBytes32(bytes32(modulus.length));
-        input.append(base);
-        input.append(exponent);
-        input.append(modulus);
-
-        output = new bytes(modulus.length);
-
-        assembly {
-            success := staticcall(gas(), 5, add(mload(input), 32), size, add(output, 32), mload(modulus))
-        }
-    }
-
-    function rsarecover(bytes memory N, bytes memory E, bytes memory S) internal view returns (bool, bytes memory) {
-        return modexp(S, E, N);
-    }
-
-    function checkSHA256(bytes memory data, string memory bodyHash) internal pure returns (bool) {
-        bytes32 digest = sha256(data);
-        return Base64.decode(bodyHash).readBytes32(0) == digest;
-    }
-
-    function checkSHA1(bytes memory data, string memory bodyHash) internal pure returns (bool) {
-        bytes20 digest = SHA1.sha1(data);
-        return Base64.decode(bodyHash).readBytes20(0) == digest;
-    }
-
-    function verifyRSASHA256(bytes modulus, bytes exponent, bytes data, bytes sig) internal view returns (bool) {
-        // Recover the message from the signature
-        bool ok;
-        bytes memory result;
-        (ok, result) = rsarecover(modulus, exponent, sig);
-
-        // Verify it ends with the hash of our data
-        return ok && sha256(data) == result.readBytes32(result.length - 32);
-    }
-
-    function verifyRSASHA1(bytes modulus, bytes exponent, bytes data, bytes sig) internal view returns (bool) {
-        // Recover the message from the signature
-        bool ok;
-        bytes memory result;
-        (ok, result) = rsarecover(modulus, exponent, sig);
-
-        // Verify it ends with the hash of our data
-        return ok && SHA1.sha1(data) == result.readBytes20(result.length - 20);
-    }
-}
+import "./Algorithm.sol";
 
 contract DKIM {
     using strings for *;
@@ -125,9 +60,9 @@ contract DKIM {
 
         var (modulus1, exponent1) = getKey();
         if (sigTags.aHash.equals("sha256".toSlice())) {
-            return Algorithm.verifyRSASHA256(modulus1, exponent1, bytes(processedHeader), Base64.decode(sigTags.b.toString()));
+            return Algorithm.verifyRSASHA256(modulus1, exponent1, bytes(processedHeader), sigTags.b.toString());
         } else {
-            return Algorithm.verifyRSASHA1(modulus1, exponent1, bytes(processedHeader), Base64.decode(sigTags.b.toString()));
+            return Algorithm.verifyRSASHA1(modulus1, exponent1, bytes(processedHeader), sigTags.b.toString());
         }
     }
 
@@ -326,7 +261,7 @@ contract DKIM {
         for(uint j = 0; j < parts.length; j++) {
             parts[j] = value.split(sp);
         }
-        return sp.joinNoEmpty(parts).toSlice();
+        return joinNoEmpty(sp, parts).toSlice();
     }
 
     function ignoreEmptyLineAtEnd(strings.slice memory value) internal pure returns (strings.slice) {
@@ -347,5 +282,52 @@ contract DKIM {
             if (isTrim) parts[i] = trim(parts[i]);
         }
         return "".toSlice().join(parts).toSlice();
+    }
+
+    function joinNoEmpty(strings.slice memory self, strings.slice[] memory parts) internal pure returns (string memory) {
+        if (parts.length == 0)
+            return "";
+
+        uint length = 0;
+        for(uint i = 0; i < parts.length; i++)
+            if (parts[i]._len > 0) {
+                length += self._len + parts[i]._len;
+            }
+        length -= self._len;
+
+        string memory ret = new string(length);
+        uint retptr;
+        assembly { retptr := add(ret, 32) }
+
+        for(i = 0; i < parts.length; i++) {
+            if (parts[i]._len == 0) continue;
+            memcpy(retptr, parts[i]._ptr, parts[i]._len);
+            retptr += parts[i]._len;
+            if (i < parts.length - 1) {
+                memcpy(retptr, self._ptr, self._len);
+                retptr += self._len;
+            }
+        }
+
+        return ret;
+    }
+
+    function memcpy(uint dest, uint src, uint len) private pure {
+        // Copy word-length chunks while possible
+        for(; len >= 32; len -= 32) {
+            assembly {
+                mstore(dest, mload(src))
+            }
+            dest += 32;
+            src += 32;
+        }
+
+        // Copy remaining bytes
+        uint mask = 256 ** (32 - len) - 1;
+        assembly {
+            let srcpart := and(mload(src), not(mask))
+            let destpart := and(mload(dest), mask)
+            mstore(dest, or(destpart, srcpart))
+        }
     }
 }
