@@ -37,12 +37,12 @@ library Algorithm {
         return modexp(S, E, N);
     }
 
-    function checkSHA256(bytes memory data, string memory bodyHash) internal view returns (bool) {
+    function checkSHA256(bytes memory data, string memory bodyHash) internal pure returns (bool) {
         bytes32 digest = sha256(data);
         return Base64.decode(bodyHash).readBytes32(0) == digest;
     }
 
-    function checkSHA1(bytes memory data, string memory bodyHash) internal view returns (bool) {
+    function checkSHA1(bytes memory data, string memory bodyHash) internal pure returns (bool) {
         bytes20 digest = SHA1.sha1(data);
         return Base64.decode(bodyHash).readBytes20(0) == digest;
     }
@@ -77,44 +77,39 @@ contract DKIM {
         strings.slice[] value;
     }
 
-    function getHeader(Headers memory headers, string memory name) internal pure returns (strings.slice memory) {
-        strings.slice memory headerName = toLowercase(name).toSlice();
-        for (uint i = 0; i < headers.len; i++) {
-            if (headers.name[i].equals(headerName)) return headers.value[i].copy();
-        }
-        revert("Header not found");
+    struct SigTags {
+        strings.slice d;
+        strings.slice s;
+        strings.slice cHeader;
+        strings.slice cBody;
+        strings.slice aHash;
+        strings.slice aKey;
+        strings.slice h;
+        strings.slice b;
+        strings.slice bh;
     }
 
-    function getLen(string memory raw) public returns (bool) {
+    function getLen(string memory raw) public view returns (bool) {
         (Headers memory headers, strings.slice memory body) = parse(raw.toSlice());
-        (strings.slice memory d,
-        strings.slice memory s,
-        strings.slice memory c,
-        strings.slice memory a,
-        strings.slice memory h,
-        strings.slice memory b,
-        strings.slice memory bh) = parseHeaderParams(headers);
+
+        strings.slice memory dkimSig = getHeader(headers, "dkim-signature");
+        SigTags memory sigTags = parseSigTags(dkimSig);
                 
-        if (!checkHash(body, c, a, bh)) return false;
-        return verifyKey(headers, h, c, a, b);   
+        require(verifyBodyHash(body, sigTags), "body hash did not verify");
+        require(verifySignature(headers, sigTags), "signature did not verify");
+        
+        return true;
     }
 
-    function checkHash(strings.slice body, strings.slice c, strings.slice a, strings.slice bh) internal view returns (bool) {
-        strings.slice memory bodyCan = c.copy();
-        bodyCan.split("/".toSlice());
-        if (bodyCan.empty()) bodyCan = "simple".toSlice();
-
-        string memory processedBody = processBody(body, bodyCan);
-        a = a.copy();
-        a.split("-".toSlice());
-        if (a.equals("sha256".toSlice())) {
-            if (!Algorithm.checkSHA256(bytes(processedBody), bh.toString())) return false;
-        } else if (a.equals("sha1".toSlice())) {
-            if (!Algorithm.checkSHA1(bytes(processedBody), bh.toString())) return false;
+    function verifyBodyHash(strings.slice memory body, SigTags memory sigTags) internal pure returns (bool) {
+        string memory processedBody = processBody(body, sigTags.cBody);
+        if (sigTags.aHash.equals("sha256".toSlice())) {
+            return Algorithm.checkSHA256(bytes(processedBody), sigTags.bh.toString());
+        } else if (sigTags.aHash.equals("sha1".toSlice())) {
+            return Algorithm.checkSHA1(bytes(processedBody), sigTags.bh.toString());
         } else {
-            revert("Unsupported hash algorithm");
+            revert("unsupported hash algorithm");
         }
-        return true;
     }
 
     function getKey() internal pure returns (bytes memory modulus1, bytes memory exponent1) {
@@ -122,21 +117,18 @@ contract DKIM {
         exponent1 = hex"010001";
     }
 
-    function verifyKey(Headers memory headers, strings.slice h, strings.slice c, strings.slice a, strings.slice b) internal view returns (bool) {
-        string memory processedHeader = processHeader(headers, h, c.split("/".toSlice()));
-        a = a.copy();
-        strings.slice memory keyAlgo = a.split("-".toSlice());
-        if (!keyAlgo.equals("rsa".toSlice())) {
-            revert("Unsupported key algorithm");
+    function verifySignature(Headers memory headers, SigTags memory sigTags) internal view returns (bool) {
+        string memory processedHeader = processHeader(headers, sigTags.h, sigTags.cHeader);
+        if (!sigTags.aKey.equals("rsa".toSlice())) {
+            revert("unsupported key algorithm");
         }
 
         var (modulus1, exponent1) = getKey();
-        if (a.equals("sha256".toSlice())) {
-            return Algorithm.verifyRSASHA256(modulus1, exponent1, bytes(processedHeader), Base64.decode(b.toString()));
+        if (sigTags.aHash.equals("sha256".toSlice())) {
+            return Algorithm.verifyRSASHA256(modulus1, exponent1, bytes(processedHeader), Base64.decode(sigTags.b.toString()));
         } else {
-            return Algorithm.verifyRSASHA1(modulus1, exponent1, bytes(processedHeader), Base64.decode(b.toString()));
+            return Algorithm.verifyRSASHA1(modulus1, exponent1, bytes(processedHeader), Base64.decode(sigTags.b.toString()));
         }
-        return true;
     }
 
     function parse(strings.slice memory all) internal pure returns (Headers memory, strings.slice memory) {
@@ -149,7 +141,7 @@ contract DKIM {
         strings.slice memory headerName = strings.slice(0, 0);
         strings.slice memory headerValue = strings.slice(0, 0);
         while (!all.empty()) {
-            var part = all.split(crlf);
+            strings.slice memory part = all.split(crlf);
             if (part.startsWith(sp) || part.startsWith(tab)) {
                 headerValue._len += crlf._len + part._len;
             } else {
@@ -168,19 +160,11 @@ contract DKIM {
                 return (headers, all);
             }
         }
-        revert("No header boundary found");
+        revert("no header boundary found");
     }
 
-    function parseHeaderParams(Headers memory headers) internal pure returns (
-        strings.slice d,
-        strings.slice s,
-        strings.slice c,
-        strings.slice a,
-        strings.slice h,
-        strings.slice b,
-        strings.slice bh
-    ) {
-        strings.slice memory signature = getHeader(headers, "dkim-signature");
+    // @dev https://tools.ietf.org/html/rfc6376#section-3.5
+    function parseSigTags(strings.slice memory signature) internal pure returns (SigTags memory sigTags) {
         strings.slice memory sc = ";".toSlice();
         strings.slice memory eq = "=".toSlice();
 
@@ -188,21 +172,32 @@ contract DKIM {
         while (!signature.empty()) {
             strings.slice memory value = signature.split(sc);
             strings.slice memory name = trim(value.split(eq));
-            value = trim(value);
-            if (name.equals("d".toSlice())) {
-                d = value;
+            value = unfoldContinuationLines(trim(value), true);
+
+            if (name.equals("v".toSlice()) && !value.equals("1".toSlice())) {
+                revert("incompatible signature version");
+            } else if (name.equals("d".toSlice())) {
+                sigTags.d = value;
             } else if (name.equals("s".toSlice())) {
-                s = value;
+                sigTags.s = value;
             } else if (name.equals("c".toSlice())) {
-                c = value;
+                sigTags.cHeader = value.split("/".toSlice());
+                sigTags.cBody = value;
+                if (sigTags.cBody.empty()) {
+                    sigTags.cBody = "simple".toSlice();
+                }
             } else if (name.equals("a".toSlice())) {
-                a = value;
+                sigTags.aKey = value.split("-".toSlice());
+                sigTags.aHash = value;
+                if (sigTags.aHash.empty()) {
+                    revert("malformed algorithm name");
+                }
             } else if (name.equals("bh".toSlice())) {
-                bh = value;
+                sigTags.bh = value;
             } else if (name.equals("h".toSlice())) {
-                h = value;
+                sigTags.h = value;
             } else if (name.equals("b".toSlice())) {
-                b = unfoldContinuationLines(value, true);
+                sigTags.b = value;
             }
         }
     }
@@ -235,7 +230,7 @@ contract DKIM {
 
             // Remove signature value for "dkim-signature" header
             if (name.equals("dkim-signature".toSlice())) {
-                var part1 = value.split("b=".toSlice());
+                strings.slice memory part1 = value.split("b=".toSlice());
                 if (value.empty()) {
                     value = part1;
                 } else {
@@ -269,6 +264,14 @@ contract DKIM {
     }
 
     // utils
+    function getHeader(Headers memory headers, string memory name) internal pure returns (strings.slice memory) {
+        strings.slice memory headerName = toLowercase(name).toSlice();
+        for (uint i = 0; i < headers.len; i++) {
+            if (headers.name[i].equals(headerName)) return headers.value[i].copy();
+        }
+        revert("Header not found");
+    }
+
     function toLowercase(string str) internal pure returns (string) {
 		bytes memory bStr = bytes(str);
 		for (uint i = 0; i < bStr.length; i++) {
