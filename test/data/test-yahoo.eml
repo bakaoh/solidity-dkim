@@ -1,0 +1,86 @@
+Delivered-To: tatattai@gmail.com
+Received: by 2002:a67:fad6:0:0:0:0:0 with SMTP id g22csp2246502vsq;
+        Thu, 7 Nov 2019 23:35:15 -0800 (PST)
+X-Google-Smtp-Source: APXvYqywHHjlQR6r190am/BI7IXT29nqAXxLg35GfU7BTXomBkRvBOv6gDKhoRVlKmeGAysdou8U
+X-Received: by 2002:aa7:8e56:: with SMTP id d22mr10121555pfr.3.1573198515666;
+        Thu, 07 Nov 2019 23:35:15 -0800 (PST)
+ARC-Seal: i=1; a=rsa-sha256; t=1573198515; cv=none;
+        d=google.com; s=arc-20160816;
+        b=H8KxUJj15GFSlpSYxlFwn+OgJSkJoPfppFeN9wJuzg+dhGVtqBw5Os6Dj0ASbLgawH
+         Ehw+hvgde1erkioqYzXwalPP2zV8UV+jzxCOQ16AsLM9jYKsES8PGftJUeD3YCvEWDC/
+         KtYKcijBV1Mcud1TMdzIBX5+bPBcVB8YM8c6H+uB3TNos3QdhRR7qnYD8zBLEwOhU8pt
+         7adh8Ithqjv0rmsm6/PWIFC9uQcWjnHUO/kiQvYhXC9dG8PK6XQMOuGVhzGom4c/qfOc
+         Se9LyIOBfG9Iu3YeehO98NQvnCZXuHK26aeuDeey0/rAVEEcWIFo+47AqaY4zUVkzAm3
+         5d6A==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20160816;
+        h=references:mime-version:subject:message-id:to:from:date
+         :dkim-signature;
+        bh=HYOOgdmfVVtieK3KeluvJX0ys43TWEM8HsZAqAibZcs=;
+        b=BGO49kH/ErK4dqgAflR8zS2F/tv4gx/1dzTVOoxURfVGeeZWdiJt8aW8klwvhRU0xw
+         64B8izin39eX46aDlwz/GjkpB8Jh3959NY/gN3jbOfWZAF7EsH/7rwKoK7qjNIZ57cZ1
+         JX9Znh1Vww1+dsstSymieBy0eGieqKLPbv6PwE0ssl9+Al7v3dwILtt6CaAPHI324auo
+         zGeSfniebOq79ohOLjM1/rzOwt1+4w3cbGVesx4Lc+WHafR0tO2qQBncR9PVzNKAOgfR
+         0UKg8fitL8qW9TQR0Y7b1ey/X48QplR0Zr5vgEgCs1SIxsICiGMTnHmEd0M7G5KnEHbr
+         +Nnw==
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@yahoo.com header.s=s2048 header.b=BILamwEJ;
+       spf=pass (google.com: domain of batatsar@yahoo.com designates 106.10.241.37 as permitted sender) smtp.mailfrom=batatsar@yahoo.com;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=yahoo.com
+Return-Path: <batatsar@yahoo.com>
+Received: from sonic307-20.consmr.mail.sg3.yahoo.com (sonic307-20.consmr.mail.sg3.yahoo.com. [106.10.241.37])
+        by mx.google.com with ESMTPS id y4si5974499pgf.539.2019.11.07.23.35.14
+        for <tatattai@gmail.com>
+        (version=TLS1_2 cipher=ECDHE-RSA-AES128-GCM-SHA256 bits=128/128);
+        Thu, 07 Nov 2019 23:35:15 -0800 (PST)
+Received-SPF: pass (google.com: domain of batatsar@yahoo.com designates 106.10.241.37 as permitted sender) client-ip=106.10.241.37;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@yahoo.com header.s=s2048 header.b=BILamwEJ;
+       spf=pass (google.com: domain of batatsar@yahoo.com designates 106.10.241.37 as permitted sender) smtp.mailfrom=batatsar@yahoo.com;
+       dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=yahoo.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=yahoo.com; s=s2048; t=1573198514; bh=HYOOgdmfVVtieK3KeluvJX0ys43TWEM8HsZAqAibZcs=; h=Date:From:To:Subject:References:From:Subject; b=BILamwEJIqABZLXxpQrO5BakB9M5fOZ8ZBfjlnWqXlte2E+/zs2BkE2B2jPioZYaLmo0T14uwyYl4y4op8XSGIDC+43lXooKbWOQy7ArXHw/xUl0POcPEAM6s24/8vxKpC3lj5y1Z023sfYH/WXDbiAhVaEFZmrATt17iH8tnDsKTob0iBSV8zSvYz368NVZVoIYwHyYffrB6TsnPkAfwBdSrU0P20SDPmVL2PqRY1brFOS6Wtj+LIqehy41Kg3juXAt43KU5Pn2U8fFDBrjDTKdrsH4MUvgt27BQgUDi/24xHHR6UzT99j5B8W6MSQZuBybtlJysmh8+LW1Gax/dg==
+X-YMail-OSG: .LPiALsVM1njeXqo46YumKKzyW3V5W7bmg7PfvJh42Tu0ot0Lp33u95EBgOViTq
+ 63NQTUcgrAXqAirpt5x823htS8u7wqbgmoHXLADGO2WgYHAnE5cDqkKgI2CWFCOCm1FzDclNuNcj
+ piVbsyjdyEGlVGEn6g5hYpbGI_ZktfrT_4UvW9tXb9OKJ4AaSb0Po4WQkHxOmwC.YwRpNTx0Evmr
+ iJJRFaBI5yboAOArCHikPUQ6r2ET_PegsBVambDh0LXj1lNXLGHpXe8YUcEZR_YNz14T2O5ymJlP
+ j269pNSMXP82_szc68GfrYmwKRNtLJxL_.dz5uE0coWMPA213lHCdeQm1lVoT6crv_OLkRVeH5Dm
+ 6_RtpZpNNjT6kxkVIGJ9RMOn8N3Pb6icl7ch.SCdx4PnlPZUXEej64bapiBvb8_7JMVKs1nQBIYR
+ TsTCa5g23sPk9PaBZiU7Sjgga8x6.0bLPwm6Bad79SBAqrQv0sAb0W7gIwfqzkJ5Ln3D9oeUflM5
+ 3ihSm87wPRTjPynfQIfwhHzuDXhO4LY9lXarj2X1mxb8T.CrLMHU6uCS6BnTY9OvY3wFrHeGrUFv
+ kY_TrXP72h3ZuL.bALJbJmBHwTCkpz1hr9Dcu7zUyVhAmMc00Pe5C2dbNNJx1SAMc36xNN0xnE0e
+ CagTfnn4Mzrj5tm2uOZj_QXRGctgAWjS3VTKcs_k2pKuU.bmsfLRh8nq9fLJtq5JaR1B5wW8zy8e
+ eUM9IKHcC3fY1aNimiVnWGEDLa0Jzw98hNHydlHMYBXcY94Cl7cb4x8e0vT6kC9JhznI0XczIAK0
+ l7fVfVijxTe1DOW_NYs7mcunGfh4j8wZubaDVR89WLQl8E8yGjWE9ib0muS0DUdNUeoNkPN0Kl9h
+ UgEFtb55tZib1NOlW7aDa8.uKoMveRIM.rbs1nldapAhdG0SChtTWzkixw1gSSOfUXESuuhUQq3P
+ Gab1UU4KUU8EqP2SxxY8kKDXTr8JN59_57iLAAKfDIi2OijepGxEJvmU2cPLvDVWPrIiFcAebl2d
+ BVWSaY6_0UjgdbAQxOUk242NhLTgly.WK18L3x1Ev8JKfJf1hSTEzl1qfQWK6FzOAkrY.LUGTWEB
+ mnOFKr.gcrigggc_TBdmc9Yz2Dme46pMznenF0BE5qgzyPIUxRDzdN6cstbbo7r_CkY6utxhSHLv
+ zBWTt9o1z9.sFU9uovgtKkzz13LUzttPZe.Z2XGySPsgzErgPuEt9Mjy0G6dA6RDjTdaeSXHXAIU
+ afxx4BoK.HMveiH2WF2ksBO8dVNSibTzvwWx29MLc
+Received: from sonic.gate.mail.ne1.yahoo.com by sonic307.consmr.mail.sg3.yahoo.com with HTTP; Fri, 8 Nov 2019 07:35:14 +0000
+Date: Fri, 8 Nov 2019 07:35:12 +0000 (UTC)
+From: bata tsar <batatsar@yahoo.com>
+To: "tatattai@gmail.com" <tatattai@gmail.com>
+Message-ID: <1458600256.1200780.1573198512873@mail.yahoo.com>
+Subject: Test yahoo
+MIME-Version: 1.0
+Content-Type: multipart/alternative; 
+	boundary="----=_Part_1200779_1256025121.1573198512872"
+References: <1458600256.1200780.1573198512873.ref@mail.yahoo.com>
+X-Mailer: WebService/1.1.14680 YMailNorrin Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.87 Safari/537.36
+Content-Length: 700
+
+------=_Part_1200779_1256025121.1573198512872
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+Hi from yahoo...
+
+
+
+
+------=_Part_1200779_1256025121.1573198512872
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+<html><head></head><body><div class="yahoo-style-wrap" style="font-family:Helvetica Neue, Helvetica, Arial, sans-serif;font-size:16px;"><div dir="ltr" data-setdir="false">Hi from yahoo...</div><div dir="ltr" data-setdir="false"><br></div><div dir="ltr" data-setdir="false"><br></div><div dir="ltr" data-setdir="false"><br></div><div dir="ltr" data-setdir="false"><br></div></div></body></html>
+------=_Part_1200779_1256025121.1573198512872--

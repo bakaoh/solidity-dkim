@@ -1,10 +1,10 @@
 var dns = require("dns");
 var crypto = require("crypto");
 
-// let domain = "google._domainkey.fusemachines.com";
-// dns.resolve( domain, 'TXT', function( error, records ) {
-//     console.log(error, records);
-// });
+let domain = "default._domainkey.protonmail.com";
+dns.resolve( domain, 'TXT', function( error, records ) {
+    console.log(error, records);
+});
 
 var fs = require("fs");
 var message = fs.readFileSync("test/data/gmail-raw.txt");

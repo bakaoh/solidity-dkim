@@ -1,7 +1,7 @@
 pragma solidity ^0.4.24;
 
 import "@ensdomains/solsha1/contracts/SHA1.sol";
-import "./utils/Buffer.sol";
+import "@ensdomains/buffer/contracts/Buffer.sol";
 
 library Algorithm {
     using Buffer for *;

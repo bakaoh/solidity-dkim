@@ -7,6 +7,7 @@
     "test": "test"
   },
   "dependencies": {
+    "@ensdomains/buffer": "0.0.10",
     "@ensdomains/solsha1": "0.0.2",
     "@openzeppelin/test-helpers": "^0.5.3",
     "chai": "^4.2.0",

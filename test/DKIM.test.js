@@ -4,7 +4,7 @@ const DKIM = artifacts.require("DKIM");
 var fs = require("fs");
 var path = require("path");
 
-var message = fs.readFileSync(path.join(__dirname, "data", "gmail-raw.txt"));
+var message = fs.readFileSync(path.join(__dirname, "data", "test-gmail.eml"));
 
 contract("DKIM", function([_, registryFunder, creator, operator]) {
   beforeEach(async function() {

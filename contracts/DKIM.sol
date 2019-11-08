@@ -3,6 +3,34 @@ pragma solidity ^0.4.24;
 import "./utils/Strings.sol";
 import "./Algorithm.sol";
 
+library Hardcode {
+    using strings for *;
+
+    function getRSAKey(strings.slice memory domain, strings.slice memory selector) internal pure returns (bytes memory modulus, bytes memory exponent) {
+        if ("fusemachines.com".toSlice().equals(domain) && "google".toSlice().equals(selector)) {
+            modulus = hex"9157daff5eb845df246f5e315144ff112ac4f7caa555ad9185620b0a2e5ffb7b14492417c804f23e9d1ce90b5a6ee5719465a85e1ad8ff9b558353d4eb14ae3022f2ef2b25fae5e78fc37c0db1431524fefa6da783b62950694939e623caab7873a110cff9bb848f43e58afcfcb14de54af4f1fd3939e2472c6b9514f174e955";
+            exponent = hex"010001";
+            return;
+        }
+        if ("gmail.com".toSlice().equals(domain) && "20161025".toSlice().equals(selector)) {
+            modulus = hex"be23c6064e1907ae147d2a96c8089c751ee5a1d872b5a7be11845056d28384cfb59978c4a91b4ffe90d3dec0616b3926038f27da4e4d254c8c1283bc9dcdabeac500fbf0e89b98d1059a7aa832893b08c9e51fcea476a69511be611250a91b6a1204a22561bb87b79f1985a687851184533d93dfab986fc2c02830c7b12df9cf0e3259e068b974e3f6cf99fa63744c8b5b23629a4efad425fa2b29b3622443373d4c389389ececc5692e0f15b54b9f49b999fd0754db41a4fc16b8236f68555f9546311326e56c1ea1fe858e3c66f3a1282d440e3b487579dd2c198c8b15a5bab82f1516f48c4013063319c4a06789f943c5fc4e7768c2c0d4ce871c3c51a177";
+            exponent = hex"010001";
+            return;
+        }
+        if ("protonmail.com".toSlice().equals(domain) && "default".toSlice().equals(selector)) {
+            modulus = hex"ca678aeacca0caadf24728d7d3821d41ff736da07ad1f13e185d3b8796da4526585cf867230c4a5fdadbf31e747b47b11b84e762c32e122e0097a8421141eeecc0e4fcbeae733d9ebf239d28f22b31cf9d10964bcda085b27a2350aa50cf40b41ecb441749f2f39d063f6c7c6f280a808b7dc2087c12fce3eeb96707abc0c2a9";
+            exponent = hex"010001";
+            return;
+        }
+        if ("yahoo.com".toSlice().equals(domain) && "s2048".toSlice().equals(selector)) {
+            modulus = hex"ba85ae7e06d6c39f0c7335066ccbf5efa45ac5d64638c9109a7f0e389fc71a843a75a95231688b6a3f0831c1c2d5cb9b271da0ce200f40754fb4561acb22c0e1ac89512364d74feea9f072894f2a88f084e09485ae9c5f961308295e1bb7e835b87c3bc0bce0b827f8600a11e97c54291b00a07ba817b33ebfa6cc67f5f51bebe258790197851f80943a3bc17572428aa19e4aa949091f9a436aa6e0b3e1773e9ca201441f07a104cce03528c3d15891a9ce03ed2a8ba40dc42e294c3d180ba5ee4488c84722ceaadb69428d2c6026cf47a592a467cc8b15a73ea3753d7f615e518ba614390e6c3796ea37367c4f1a109646d5472e9e28e8d49e84924e648087";
+            exponent = hex"010001";
+            return;
+        }
+        revert("unknown hardcode DNS record");
+    }
+}
+
 contract DKIM {
     using strings for *;
 
@@ -47,22 +75,17 @@ contract DKIM {
         }
     }
 
-    function getKey() internal pure returns (bytes memory modulus1, bytes memory exponent1) {
-        modulus1 = hex"9157daff5eb845df246f5e315144ff112ac4f7caa555ad9185620b0a2e5ffb7b14492417c804f23e9d1ce90b5a6ee5719465a85e1ad8ff9b558353d4eb14ae3022f2ef2b25fae5e78fc37c0db1431524fefa6da783b62950694939e623caab7873a110cff9bb848f43e58afcfcb14de54af4f1fd3939e2472c6b9514f174e955";
-        exponent1 = hex"010001";
-    }
-
     function verifySignature(Headers memory headers, SigTags memory sigTags) internal view returns (bool) {
         string memory processedHeader = processHeader(headers, sigTags.h, sigTags.cHeader);
         if (!sigTags.aKey.equals("rsa".toSlice())) {
             revert("unsupported key algorithm");
         }
 
-        var (modulus1, exponent1) = getKey();
+        (bytes memory modulus, bytes memory exponent) = Hardcode.getRSAKey(sigTags.d, sigTags.s);
         if (sigTags.aHash.equals("sha256".toSlice())) {
-            return Algorithm.verifyRSASHA256(modulus1, exponent1, bytes(processedHeader), sigTags.b.toString());
+            return Algorithm.verifyRSASHA256(modulus, exponent, bytes(processedHeader), sigTags.b.toString());
         } else {
-            return Algorithm.verifyRSASHA1(modulus1, exponent1, bytes(processedHeader), sigTags.b.toString());
+            return Algorithm.verifyRSASHA1(modulus, exponent, bytes(processedHeader), sigTags.b.toString());
         }
     }
 
