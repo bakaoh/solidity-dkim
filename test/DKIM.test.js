@@ -20,11 +20,11 @@ contract("DKIM", function([_, registryFunder, creator, operator]) {
     // console.log(JSON.stringify(x));
     // x.should.be.equal("228");
 
-    await this.dkim.set(
-      "0x9157daff5eb845df246f5e315144ff112ac4f7caa555ad9185620b0a2e5ffb7b14492417c804f23e9d1ce90b5a6ee5719465a85e1ad8ff9b558353d4eb14ae3022f2ef2b25fae5e78fc37c0db1431524fefa6da783b62950694939e623caab7873a110cff9bb848f43e58afcfcb14de54af4f1fd3939e2472c6b9514f174e955",
-      "0x10001",
-    );
-    let x = await this.dkim.getLen(message.toString());
+    // await this.dkim.set(
+    //   "0x9157daff5eb845df246f5e315144ff112ac4f7caa555ad9185620b0a2e5ffb7b14492417c804f23e9d1ce90b5a6ee5719465a85e1ad8ff9b558353d4eb14ae3022f2ef2b25fae5e78fc37c0db1431524fefa6da783b62950694939e623caab7873a110cff9bb848f43e58afcfcb14de54af4f1fd3939e2472c6b9514f174e955",
+    //   "0x10001",
+    // );
+    let x = await this.dkim.getLen.call(message.toString());
     console.log(JSON.stringify(x));
     x.should.be.equal("228");
 

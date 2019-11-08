@@ -4,8 +4,9 @@ import "./utils/Strings.sol";
 import "./utils/BytesUtils.sol";
 import "./utils/Buffer.sol";
 import "./utils/Base64.sol";
+import "@ensdomains/solsha1/contracts/SHA1.sol";
 
-contract RSASHA256Algorithm {
+library Algorithm {
     using BytesUtils for *;
     using Buffer for *;
 
@@ -36,7 +37,17 @@ contract RSASHA256Algorithm {
         return modexp(S, E, N);
     }
 
-    function verify(bytes modulus, bytes exponent, bytes data, bytes sig) internal view returns (bool) {
+    function checkSHA256(bytes memory data, string memory bodyHash) internal view returns (bool) {
+        bytes32 digest = sha256(data);
+        return Base64.decode(bodyHash).readBytes32(0) == digest;
+    }
+
+    function checkSHA1(bytes memory data, string memory bodyHash) internal view returns (bool) {
+        bytes20 digest = SHA1.sha1(data);
+        return Base64.decode(bodyHash).readBytes20(0) == digest;
+    }
+
+    function verifyRSASHA256(bytes modulus, bytes exponent, bytes data, bytes sig) internal view returns (bool) {
         // Recover the message from the signature
         bool ok;
         bytes memory result;
@@ -45,26 +56,20 @@ contract RSASHA256Algorithm {
         // Verify it ends with the hash of our data
         return ok && sha256(data) == result.readBytes32(result.length - 32);
     }
+
+    function verifyRSASHA1(bytes modulus, bytes exponent, bytes data, bytes sig) internal view returns (bool) {
+        // Recover the message from the signature
+        bool ok;
+        bytes memory result;
+        (ok, result) = rsarecover(modulus, exponent, sig);
+
+        // Verify it ends with the hash of our data
+        return ok && SHA1.sha1(data) == result.readBytes20(result.length - 20);
+    }
 }
 
-contract DKIM is RSASHA256Algorithm{
+contract DKIM {
     using strings for *;
-
-    function DKIM() public {
-    }
-
-    function getKey(strings.slice selector, strings.slice domain) private pure returns (
-        strings.slice
-    ) {
-        return 'MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCRV9r/XrhF3yRvXjFRRP8RKsT3yqVVrZGFYgsKLl/7exRJJBfIBPI+nRzpC1pu5XGUZaheGtj/m1WDU9TrFK4wIvLvKyX65eePw3wNsUMVJP76baeDtilQaUk55iPKq3hzoRDP+buEj0Plivz8sU3lSvTx/Tk54kcsa5UU8XTpVQIDAQAB'.toSlice();
-    }
-
-    bytes public modulus;
-    bytes public exponent;
-    function set(bytes m, bytes e) public {
-        modulus = m;
-        exponent = e;
-    }
 
     struct H {
         strings.slice name;
@@ -89,13 +94,48 @@ contract DKIM is RSASHA256Algorithm{
         strings.slice memory b,
         strings.slice memory bh) = parseHeaderParams(headers);
                 
-        strings.slice memory headerCan = c.split("/".toSlice());
-        if (c.empty()) c = "simple".toSlice();
-        bytes32 digest = sha256(bytes(processBody(body, c)));
-        if (Base64.decode(bh.toString()).readBytes32(0) != digest) return false;
+        if (!checkHash(body, c, a, bh)) return false;
+        return verifyKey(headers, h, c, a, b);   
+    }
 
-        string memory processedHeader = processHeader(headers, h, headerCan);
-        return verify(modulus, exponent, bytes(processedHeader), Base64.decode(b.toString()));
+    function checkHash(strings.slice body, strings.slice c, strings.slice a, strings.slice bh) internal view returns (bool) {
+        strings.slice memory bodyCan = c.copy();
+        bodyCan.split("/".toSlice());
+        if (bodyCan.empty()) bodyCan = "simple".toSlice();
+
+        string memory processedBody = processBody(body, bodyCan);
+        a = a.copy();
+        a.split("-".toSlice());
+        if (a.equals("sha256".toSlice())) {
+            if (!Algorithm.checkSHA256(bytes(processedBody), bh.toString())) return false;
+        } else if (a.equals("sha1".toSlice())) {
+            if (!Algorithm.checkSHA1(bytes(processedBody), bh.toString())) return false;
+        } else {
+            revert("Unsupported hash algorithm");
+        }
+        return true;
+    }
+
+    function getKey() internal pure returns (bytes memory modulus1, bytes memory exponent1) {
+        modulus1 = hex"9157daff5eb845df246f5e315144ff112ac4f7caa555ad9185620b0a2e5ffb7b14492417c804f23e9d1ce90b5a6ee5719465a85e1ad8ff9b558353d4eb14ae3022f2ef2b25fae5e78fc37c0db1431524fefa6da783b62950694939e623caab7873a110cff9bb848f43e58afcfcb14de54af4f1fd3939e2472c6b9514f174e955";
+        exponent1 = hex"010001";
+    }
+
+    function verifyKey(H[] memory headers, strings.slice h, strings.slice c, strings.slice a, strings.slice b) internal view returns (bool) {
+        string memory processedHeader = processHeader(headers, h, c.split("/".toSlice()));
+        a = a.copy();
+        strings.slice memory keyAlgo = a.split("-".toSlice());
+        if (!keyAlgo.equals("rsa".toSlice())) {
+            revert("Unsupported key algorithm");
+        }
+
+        var (modulus1, exponent1) = getKey();
+        if (a.equals("sha256".toSlice())) {
+            return Algorithm.verifyRSASHA256(modulus1, exponent1, bytes(processedHeader), Base64.decode(b.toString()));
+        } else {
+            return Algorithm.verifyRSASHA1(modulus1, exponent1, bytes(processedHeader), Base64.decode(b.toString()));
+        }
+        return true;
     }
 
     function parse(strings.slice memory all) internal pure returns (H[] memory, strings.slice) {
