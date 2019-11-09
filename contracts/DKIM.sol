@@ -27,12 +27,20 @@ library Hardcode {
             exponent = hex"010001";
             return;
         }
-        revert("unknown hardcode DNS record");
     }
 }
 
 contract DKIM {
     using strings for *;
+
+    uint private constant STATE_SUCCESS = 0;
+    uint private constant STATE_PERMFAIL = 1;
+    uint private constant STATE_TEMPFAIL = 2;
+    
+    struct Status {
+        uint state;
+        strings.slice message;
+    }
 
     struct Headers {
         uint len;
@@ -42,6 +50,7 @@ contract DKIM {
 
     struct SigTags {
         strings.slice d;
+        strings.slice i;
         strings.slice s;
         strings.slice cHeader;
         strings.slice cBody;
@@ -52,43 +61,58 @@ contract DKIM {
         strings.slice bh;
     }
 
-    function verify(string memory raw) public view returns (bool) {
-        (Headers memory headers, strings.slice memory body) = parse(raw.toSlice());
+    function verify(string memory raw) public view returns (uint state, string rs) {
+        Headers memory headers;
+        strings.slice memory body;
+        Status memory status;
+        (headers, body, status) = parse(raw.toSlice());
+        if (status.state != STATE_SUCCESS) return (status.state, status.message.toString());
 
         strings.slice memory dkimSig = getHeader(headers, "dkim-signature");
-        SigTags memory sigTags = parseSigTags(dkimSig);
-                
-        require(verifyBodyHash(body, sigTags), "body hash did not verify");
-        require(verifySignature(headers, sigTags), "signature did not verify");
-        return true;
+        
+        SigTags memory sigTags;
+        (sigTags, status) = parseSigTags(dkimSig);
+        if (status.state != STATE_SUCCESS) return (status.state, status.message.toString());
+     
+        status = verifyBodyHash(body, sigTags);
+        if (status.state != STATE_SUCCESS) return (status.state, status.message.toString());
+
+        status = verifySignature(headers, sigTags);
+        if (status.state != STATE_SUCCESS) return (status.state, status.message.toString());
+
+        return (STATE_SUCCESS, sigTags.d.toString());
     }
 
-    function verifyBodyHash(strings.slice memory body, SigTags memory sigTags) internal pure returns (bool) {
+    function verifyBodyHash(strings.slice memory body, SigTags memory sigTags) internal pure returns (Status memory) {
         string memory processedBody = processBody(body, sigTags.cBody);
+        bool check = false;
         if (sigTags.aHash.equals("sha256".toSlice())) {
-            return Algorithm.checkSHA256(bytes(processedBody), sigTags.bh.toString());
-        } else if (sigTags.aHash.equals("sha1".toSlice())) {
-            return Algorithm.checkSHA1(bytes(processedBody), sigTags.bh.toString());
+            check = Algorithm.checkSHA256(bytes(processedBody), sigTags.bh.toString());
         } else {
-            revert("unsupported hash algorithm");
+            check = Algorithm.checkSHA1(bytes(processedBody), sigTags.bh.toString());
         }
+        return check ? Status(STATE_SUCCESS, strings.slice(0, 0)) : Status(STATE_PERMFAIL, "body hash did not verify".toSlice());
     }
 
-    function verifySignature(Headers memory headers, SigTags memory sigTags) internal view returns (bool) {
+    function verifySignature(Headers memory headers, SigTags memory sigTags) internal view returns (Status memory) {
+        bytes memory modulus;
+        bytes memory exponent;
+        (modulus, exponent) = Hardcode.getRSAKey(sigTags.d, sigTags.s);
+        if (modulus.length == 0 || exponent.length == 0) {
+            return Status(STATE_TEMPFAIL, "dns query error".toSlice());
+        }
+
+        bool check = false;
         string memory processedHeader = processHeader(headers, sigTags.h, sigTags.cHeader);
-        if (!sigTags.aKey.equals("rsa".toSlice())) {
-            revert("unsupported key algorithm");
-        }
-
-        (bytes memory modulus, bytes memory exponent) = Hardcode.getRSAKey(sigTags.d, sigTags.s);
         if (sigTags.aHash.equals("sha256".toSlice())) {
-            return Algorithm.verifyRSASHA256(modulus, exponent, bytes(processedHeader), sigTags.b.toString());
+            check = Algorithm.verifyRSASHA256(modulus, exponent, bytes(processedHeader), sigTags.b.toString());
         } else {
-            return Algorithm.verifyRSASHA1(modulus, exponent, bytes(processedHeader), sigTags.b.toString());
+            check = Algorithm.verifyRSASHA1(modulus, exponent, bytes(processedHeader), sigTags.b.toString());
         }
+        return check ? Status(STATE_SUCCESS, strings.slice(0, 0)) : Status(STATE_PERMFAIL, "signature did not verify".toSlice());
     }
 
-    function parse(strings.slice memory all) internal pure returns (Headers memory, strings.slice memory) {
+    function parse(strings.slice memory all) internal pure returns (Headers memory, strings.slice memory, Status memory) {
         strings.slice memory crlf = "\r\n".toSlice();
         strings.slice memory colon = ":".toSlice();
         strings.slice memory sp = "\x20".toSlice();
@@ -114,48 +138,78 @@ contract DKIM {
             if (all.startsWith(crlf)) {
                 all._len -= 2;
                 all._ptr += 2;
-                return (headers, all);
+                return (headers, all, Status(STATE_SUCCESS, strings.slice(0, 0)));
             }
         }
-        revert("no header boundary found");
+        return (headers, all, Status(STATE_PERMFAIL, "no header boundary found".toSlice()));
     }
 
     // @dev https://tools.ietf.org/html/rfc6376#section-3.5
-    function parseSigTags(strings.slice memory signature) internal pure returns (SigTags memory sigTags) {
+    function parseSigTags(strings.slice memory signature) internal pure returns (SigTags memory sigTags, Status memory status) {
         strings.slice memory sc = ";".toSlice();
         strings.slice memory eq = "=".toSlice();
+        status = Status(STATE_SUCCESS, strings.slice(0, 0));
 
         signature.split(":".toSlice());
         while (!signature.empty()) {
             strings.slice memory value = signature.split(sc);
             strings.slice memory name = trim(value.split(eq));
-            value = unfoldContinuationLines(trim(value), true);
+            value = trim(value);
 
             if (name.equals("v".toSlice()) && !value.equals("1".toSlice())) {
-                revert("incompatible signature version");
+                status = Status(STATE_PERMFAIL, "incompatible signature version".toSlice());
+                return;
             } else if (name.equals("d".toSlice())) {
                 sigTags.d = value;
+            } else if (name.equals("i".toSlice())) {
+                sigTags.i = value;
             } else if (name.equals("s".toSlice())) {
                 sigTags.s = value;
             } else if (name.equals("c".toSlice())) {
-                sigTags.cHeader = value.split("/".toSlice());
-                sigTags.cBody = value;
-                if (sigTags.cBody.empty()) {
+                if (value.empty()) {
+                    sigTags.cHeader = "simple".toSlice();
                     sigTags.cBody = "simple".toSlice();
+                } else {
+                    sigTags.cHeader = value.split("/".toSlice());
+                    sigTags.cBody = value;
+                    if (sigTags.cBody.empty()) {
+                        sigTags.cBody = "simple".toSlice();
+                    }
                 }
             } else if (name.equals("a".toSlice())) {
                 sigTags.aKey = value.split("-".toSlice());
                 sigTags.aHash = value;
                 if (sigTags.aHash.empty()) {
-                    revert("malformed algorithm name");
+                    status = Status(STATE_PERMFAIL, "malformed algorithm name".toSlice());
+                    return;
+                }
+                if (!sigTags.aHash.equals("sha256".toSlice()) && !sigTags.aHash.equals("sha1".toSlice())) {
+                    status = Status(STATE_PERMFAIL, "unsupported hash algorithm".toSlice());
+                    return;
+                }
+                if (!sigTags.aKey.equals("rsa".toSlice())) {
+                    status = Status(STATE_PERMFAIL, "unsupported key algorithm".toSlice());
+                    return;
                 }
             } else if (name.equals("bh".toSlice())) {
                 sigTags.bh = value;
             } else if (name.equals("h".toSlice())) {
                 sigTags.h = value;
             } else if (name.equals("b".toSlice())) {
-                sigTags.b = value;
+                sigTags.b = unfoldContinuationLines(value, true);
             }
+        }
+
+        // The tags listed as required in Section 3.5 are v, a, b, bh, d, h, s
+        if (sigTags.aKey.empty() || sigTags.b.empty() || sigTags.bh.empty() || sigTags.d.empty() || sigTags.h.empty() || sigTags.s.empty()) {
+            status = Status(STATE_PERMFAIL, "required tag missing".toSlice());
+            return;
+        }
+        if (sigTags.i.empty()) {
+            // behave as though the value of i tag were "@d" 
+        } else if (!sigTags.i.endsWith(sigTags.d)) {
+            status = Status(STATE_PERMFAIL, "domain mismatch".toSlice());
+            return;
         }
     }
 
