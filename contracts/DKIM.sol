@@ -44,8 +44,10 @@ contract DKIM {
 
     struct Headers {
         uint len;
+        uint signum;
         strings.slice[] name;
         strings.slice[] value;
+        strings.slice[] signatures;
     }
 
     struct SigTags {
@@ -61,26 +63,33 @@ contract DKIM {
         strings.slice bh;
     }
 
-    function verify(string memory raw) public view returns (uint state, string rs) {
+    function verify(string memory raw) public view returns (uint success, string domain) {
         Headers memory headers;
         strings.slice memory body;
         Status memory status;
         (headers, body, status) = parse(raw.toSlice());
         if (status.state != STATE_SUCCESS) return (status.state, status.message.toString());
 
-        strings.slice memory dkimSig = getHeader(headers, "dkim-signature");
+        uint successCount = 0;
+        strings.slice memory lastDomain = strings.slice(0, 0);
+        for (uint i = 0; i < headers.signum; i++) {
+            strings.slice memory dkimSig = headers.signatures[i];
+            
+            SigTags memory sigTags;
+            (sigTags, status) = parseSigTags(dkimSig.copy());
+            if (status.state != STATE_SUCCESS) continue;
+
+            status = verifyBodyHash(body, sigTags);
+            if (status.state != STATE_SUCCESS) continue;
+
+            status = verifySignature(headers, sigTags, dkimSig);
+            if (status.state == STATE_SUCCESS) {
+                successCount++;
+                lastDomain = sigTags.d;
+            }
+        }
         
-        SigTags memory sigTags;
-        (sigTags, status) = parseSigTags(dkimSig);
-        if (status.state != STATE_SUCCESS) return (status.state, status.message.toString());
-     
-        status = verifyBodyHash(body, sigTags);
-        if (status.state != STATE_SUCCESS) return (status.state, status.message.toString());
-
-        status = verifySignature(headers, sigTags);
-        if (status.state != STATE_SUCCESS) return (status.state, status.message.toString());
-
-        return (STATE_SUCCESS, sigTags.d.toString());
+        return (successCount, lastDomain.toString());
     }
 
     function verifyBodyHash(strings.slice memory body, SigTags memory sigTags) internal pure returns (Status memory) {
@@ -94,7 +103,7 @@ contract DKIM {
         return check ? Status(STATE_SUCCESS, strings.slice(0, 0)) : Status(STATE_PERMFAIL, "body hash did not verify".toSlice());
     }
 
-    function verifySignature(Headers memory headers, SigTags memory sigTags) internal view returns (Status memory) {
+    function verifySignature(Headers memory headers, SigTags memory sigTags, strings.slice memory signature) internal view returns (Status memory) {
         bytes memory modulus;
         bytes memory exponent;
         (modulus, exponent) = Hardcode.getRSAKey(sigTags.d, sigTags.s);
@@ -103,7 +112,7 @@ contract DKIM {
         }
 
         bool check = false;
-        string memory processedHeader = processHeader(headers, sigTags.h, sigTags.cHeader);
+        string memory processedHeader = processHeader(headers, sigTags.h, sigTags.cHeader, signature);
         if (sigTags.aHash.equals("sha256".toSlice())) {
             check = Algorithm.verifyRSASHA256(modulus, exponent, bytes(processedHeader), sigTags.b.toString());
         } else {
@@ -117,8 +126,9 @@ contract DKIM {
         strings.slice memory colon = ":".toSlice();
         strings.slice memory sp = "\x20".toSlice();
         strings.slice memory tab = "\x09".toSlice();
+        strings.slice memory signame = "dkim-signature".toSlice();
 
-        Headers memory headers = Headers(0, new strings.slice[](30), new strings.slice[](30));
+        Headers memory headers = Headers(0, 0, new strings.slice[](30), new strings.slice[](30), new strings.slice[](3));
         strings.slice memory headerName = strings.slice(0, 0);
         strings.slice memory headerValue = strings.slice(0, 0);
         while (!all.empty()) {
@@ -126,12 +136,15 @@ contract DKIM {
             if (part.startsWith(sp) || part.startsWith(tab)) {
                 headerValue._len += crlf._len + part._len;
             } else {
-                if (!headerName.empty()) {
-                    headers.name[headers.len] = toLowercase(headerName.toString()).toSlice();
+                if (headerName.equals(signame)) {
+                    headers.signatures[headers.signum] = headerValue;
+                    headers.signum++;
+                } else if (!headerName.empty()) {
+                    headers.name[headers.len] = headerName;
                     headers.value[headers.len] = headerValue;
                     headers.len++;
                 }
-                headerName = part.copy().split(colon);
+                headerName = toLowercase(part.copy().split(colon).toString()).toSlice();
                 headerValue = part;
             }
 
@@ -219,14 +232,18 @@ contract DKIM {
             message = removeWSPSequences(message);
         }
         message = ignoreEmptyLineAtEnd(message);
+        // https://tools.ietf.org/html/rfc6376#section-3.4.3
+        if (method.equals("simple".toSlice()) && message.empty()) {
+            return "\r\n";
+        }
         return message.toString();
     }
 
-    function processHeader(Headers memory headers, strings.slice memory h, strings.slice memory method) internal pure returns (string) {
+    function processHeader(Headers memory headers, strings.slice memory h, strings.slice memory method, strings.slice memory signature) internal pure returns (string) {
         strings.slice memory crlf = "\r\n".toSlice();
         strings.slice memory colon = ":".toSlice();
         strings.slice[] memory tags = parseSigHTag(h);
-        strings.slice[] memory processedHeader = new strings.slice[](tags.length);
+        strings.slice[] memory processedHeader = new strings.slice[](tags.length + 1);
         bool isSimple = method.equals("simple".toSlice());
 
         for (uint j = 0; j < tags.length; j++) {
@@ -241,19 +258,6 @@ contract DKIM {
 
             // Convert all header field names to lowercase
             strings.slice memory name = toLowercase(trim(value.split(colon)).toString()).toSlice();
-
-            // Remove signature value for "dkim-signature" header
-            if (name.equals("dkim-signature".toSlice())) {
-                strings.slice memory part1 = value.split("b=".toSlice());
-                if (value.empty()) {
-                    value = part1;
-                } else {
-                    part1._len += 2;
-                    value.split(";".toSlice());
-                    value = part1.concat(value).toSlice();
-                }
-            }
-
             value = unfoldContinuationLines(value, false);
             value = removeWSPSequences(value);
             value = trim(value);
@@ -264,19 +268,38 @@ contract DKIM {
             processedHeader[j] = colon.join(parts).toSlice();
         }
 
+        if (isSimple) {
+            processedHeader[processedHeader.length - 1] = signature;
+        } else {
+            signature.split(colon);
+            // Remove signature value for "dkim-signature" header
+            strings.slice memory beforeB = signature.split("b=".toSlice());
+            if (signature.empty()) {
+                signature = beforeB;
+            } else {
+                beforeB._len += 2;
+                signature.split(";".toSlice());
+                signature = beforeB.concat(signature).toSlice();
+            }
+            signature = unfoldContinuationLines(signature, false);
+            signature = removeWSPSequences(signature);
+            signature = trim(signature);
+
+            processedHeader[processedHeader.length - 1] = "dkim-signature:".toSlice().concat(signature).toSlice();
+        }
+
         return joinNoEmpty(crlf, processedHeader);
     }
 
     function parseSigHTag(strings.slice memory value) internal pure returns (strings.slice[]) {
         strings.slice memory colon = ":".toSlice();
-        strings.slice[] memory list = new strings.slice[](value.count(colon) + 2);
+        strings.slice[] memory list = new strings.slice[](value.count(colon) + 1);
         for(uint i = 0; i < list.length; i++) {
             strings.slice memory h = trim(value.split(colon));
             uint j = 0;
             for (; j < i; j++) if (list[j].equals(h)) break;
             if (j == i) list[i] = h;
         }
-        list[list.length - 1] = "dkim-signature".toSlice();
         return list;
     }
 
