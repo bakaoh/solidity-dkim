@@ -68,28 +68,36 @@ contract DKIM {
         strings.slice memory body;
         Status memory status;
         (headers, body, status) = parse(raw.toSlice());
-        if (status.state != STATE_SUCCESS) return (status.state, status.message.toString());
+        if (status.state != STATE_SUCCESS) return (0, status.message.toString());
 
         uint successCount = 0;
-        strings.slice memory lastDomain = strings.slice(0, 0);
+        strings.slice memory last = strings.slice(0, 0);
         for (uint i = 0; i < headers.signum; i++) {
             strings.slice memory dkimSig = headers.signatures[i];
             
             SigTags memory sigTags;
             (sigTags, status) = parseSigTags(dkimSig.copy());
-            if (status.state != STATE_SUCCESS) continue;
-
+            if (status.state != STATE_SUCCESS) {
+                if (successCount == 0) last = status.message;
+                continue;
+            }
+            
             status = verifyBodyHash(body, sigTags);
-            if (status.state != STATE_SUCCESS) continue;
+            if (status.state != STATE_SUCCESS) {
+                if (successCount == 0) last = status.message;
+                continue;
+            }
 
             status = verifySignature(headers, sigTags, dkimSig);
-            if (status.state == STATE_SUCCESS) {
+            if (status.state != STATE_SUCCESS) {
+                if (successCount == 0) last = status.message;
+            } else {
                 successCount++;
-                lastDomain = sigTags.d;
+                last = sigTags.d;
             }
         }
         
-        return (successCount, lastDomain.toString());
+        return (successCount, last.toString());
     }
 
     function verifyBodyHash(strings.slice memory body, SigTags memory sigTags) internal pure returns (Status memory) {

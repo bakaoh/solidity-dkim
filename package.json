@@ -1,22 +1,22 @@
 {
-  "name": "dkim",
+  "name": "solidity-dkim",
   "version": "1.0.0",
-  "description": "",
+  "description": "Verify DomainKeys Identified Mail signatures",
   "main": "truffle-config.js",
   "directories": {
     "test": "test"
   },
   "dependencies": {
     "@ensdomains/buffer": "0.0.10",
-    "@ensdomains/solsha1": "0.0.2",
+    "@ensdomains/solsha1": "0.0.2"
+  },
+  "devDependencies": {
     "@openzeppelin/test-helpers": "^0.5.3",
-    "chai": "^4.2.0",
-    "truffle-hdwallet-provider": "^1.0.17"
+    "chai": "^4.2.0"
   },
-  "devDependencies": {},
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "",
-  "license": "ISC"
+    "test": "truffle test",
+    "compile": "truffle compile",
+    "migrate": "truffle migrate"
+  }
 }

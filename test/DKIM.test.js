@@ -3,6 +3,25 @@ const path = require("path");
 const { BN } = require('@openzeppelin/test-helpers');
 const DKIM = artifacts.require("DKIM");
 
+const rawFile = process.env.RAW_EMAIL;
+if (rawFile) {
+  contract("DKIM", function([creator]) {
+    before(async function() {
+      this.dkim = await DKIM.new({ from: creator });
+    });
+  
+    it(`verify ${rawFile}`, async function() {
+      let message = fs.readFileSync(path.resolve(__dirname, "../", rawFile));
+      let verification = await this.dkim.verify(message.toString());
+      let successCount = verification.success.toString();
+      console.log("Total success:", successCount);
+      console.log(successCount == "0" ? "Last fail" : "Last domain:", verification.domain);
+    });
+  });
+
+  return;
+}
+
 contract("DKIM", function([creator]) {
   before(async function() {
     this.dkim = await DKIM.new({ from: creator });
