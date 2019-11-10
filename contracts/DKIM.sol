@@ -54,13 +54,13 @@ contract DKIM {
         strings.slice d;
         strings.slice i;
         strings.slice s;
+        strings.slice b;
+        strings.slice bh;
         strings.slice cHeader;
         strings.slice cBody;
         strings.slice aHash;
         strings.slice aKey;
-        strings.slice h;
-        strings.slice b;
-        strings.slice bh;
+        strings.slice[] h;
         uint l;
     }
 
@@ -217,7 +217,12 @@ contract DKIM {
             } else if (name.equals("bh".toSlice())) {
                 sigTags.bh = value;
             } else if (name.equals("h".toSlice())) {
-                sigTags.h = value;
+                bool signedFrom;
+                (sigTags.h, signedFrom) = parseSigHTag(value);
+                if (!signedFrom) {
+                    status = Status(STATE_PERMFAIL, "From field not signed".toSlice());
+                    return;
+                }
             } else if (name.equals("b".toSlice())) {
                 sigTags.b = unfoldContinuationLines(value, true);
             } else if (name.equals("l".toSlice())) {
@@ -226,7 +231,7 @@ contract DKIM {
         }
 
         // The tags listed as required in Section 3.5 are v, a, b, bh, d, h, s
-        if (sigTags.aKey.empty() || sigTags.b.empty() || sigTags.bh.empty() || sigTags.d.empty() || sigTags.h.empty() || sigTags.s.empty()) {
+        if (sigTags.aKey.empty() || sigTags.b.empty() || sigTags.bh.empty() || sigTags.d.empty() || sigTags.s.empty()) {
             status = Status(STATE_PERMFAIL, "required tag missing".toSlice());
             return;
         }
@@ -236,6 +241,22 @@ contract DKIM {
             status = Status(STATE_PERMFAIL, "domain mismatch".toSlice());
             return;
         }
+    }
+
+    function parseSigHTag(strings.slice memory value) internal pure returns (strings.slice[] memory, bool) {
+        strings.slice memory colon = ":".toSlice();
+        strings.slice memory from = "from".toSlice();
+        strings.slice[] memory list = new strings.slice[](value.count(colon) + 1);
+        bool signedFrom = false;
+
+        for(uint i = 0; i < list.length; i++) {
+            strings.slice memory h = toLowercase(trim(value.split(colon)).toString()).toSlice();
+            uint j = 0;
+            for (; j < i; j++) if (list[j].equals(h)) break;
+            if (j == i) list[i] = h;
+            if (h.equals(from)) signedFrom = true;
+        }
+        return (list, signedFrom);
     }
 
     function processBody(strings.slice message, strings.slice method) internal pure returns (string) {
@@ -251,16 +272,15 @@ contract DKIM {
         return message.toString();
     }
 
-    function processHeader(Headers memory headers, strings.slice memory h, strings.slice memory method, strings.slice memory signature) internal pure returns (string) {
+    function processHeader(Headers memory headers, strings.slice[] memory tags, strings.slice memory method, strings.slice memory signature) internal pure returns (string) {
         strings.slice memory crlf = "\r\n".toSlice();
         strings.slice memory colon = ":".toSlice();
-        strings.slice[] memory tags = parseSigHTag(h);
         strings.slice[] memory processedHeader = new strings.slice[](tags.length + 1);
         bool isSimple = method.equals("simple".toSlice());
 
         for (uint j = 0; j < tags.length; j++) {
             if (tags[j].empty()) continue;
-            strings.slice memory value = getHeader(headers, tags[j].toString());
+            strings.slice memory value = getHeader(headers, tags[j]);
             if (value.empty()) continue;
 
             if (isSimple) {
@@ -268,14 +288,14 @@ contract DKIM {
                 continue;
             }
 
-            // Convert all header field names to lowercase
-            strings.slice memory name = toLowercase(trim(value.split(colon)).toString()).toSlice();
+            value.split(colon);
             value = unfoldContinuationLines(value, false);
             value = removeWSPSequences(value);
             value = trim(value);
 
+            // Convert all header field names to lowercase
             strings.slice[] memory parts = new strings.slice[](2);
-            parts[0] = name;
+            parts[0] = tags[j];
             parts[1] = value;
             processedHeader[j] = colon.join(parts).toSlice();
         }
@@ -303,21 +323,8 @@ contract DKIM {
         return joinNoEmpty(crlf, processedHeader);
     }
 
-    function parseSigHTag(strings.slice memory value) internal pure returns (strings.slice[]) {
-        strings.slice memory colon = ":".toSlice();
-        strings.slice[] memory list = new strings.slice[](value.count(colon) + 1);
-        for(uint i = 0; i < list.length; i++) {
-            strings.slice memory h = trim(value.split(colon));
-            uint j = 0;
-            for (; j < i; j++) if (list[j].equals(h)) break;
-            if (j == i) list[i] = h;
-        }
-        return list;
-    }
-
     // utils
-    function getHeader(Headers memory headers, string memory name) internal pure returns (strings.slice memory) {
-        strings.slice memory headerName = toLowercase(name).toSlice();
+    function getHeader(Headers memory headers, strings.slice memory headerName) internal pure returns (strings.slice memory) {
         for (uint i = 0; i < headers.len; i++) {
             if (headers.name[i].equals(headerName)) return headers.value[i].copy();
         }

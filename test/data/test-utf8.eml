@@ -1,0 +1,85 @@
+Delivered-To: tatattai@gmail.com
+Received: by 2002:a67:fad6:0:0:0:0:0 with SMTP id g22csp4761083vsq;
+        Sat, 9 Nov 2019 17:28:03 -0800 (PST)
+X-Received: by 2002:a17:906:3385:: with SMTP id v5mr16016793eja.154.1573349283730;
+        Sat, 09 Nov 2019 17:28:03 -0800 (PST)
+ARC-Seal: i=1; a=rsa-sha256; t=1573349283; cv=none;
+        d=google.com; s=arc-20160816;
+        b=uSHsrbcq1FS1c4MmdIduG681JhT+Hd32iTFZJpe4Gi3ZmmSS9KR+Let53VkEgn583J
+         mrIbfsCWIae4hw2J8PtNjXswVlf8bpfCZluXYGIltewB/XiP/evj+aOWd/h3uKviQIBl
+         zB/C7mGMo4iEq526SOG4lPK1PSa753bLE7Nhk1nytw0hCJdZgyI4aiBk7iDemkGvOLNE
+         OjAeuFxx7fU33l7tj1LH/WGWptYTGq8P3QiiswdZgPMut/QY8SCBhp4UYE571fnR9twi
+         wMzuC4vDYyPmqPk6t21Rc+0411bpz5/CmRNgpbe+1wZb296LVL3+hZX542YsgxOq7eUB
+         qCeg==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20160816;
+        h=to:subject:message-id:date:from:mime-version:dkim-signature;
+        bh=qi3Z6NXimbEj/iv0E8IKvBnH3dvbveqylE9OZGBdUz8=;
+        b=q+wPtbMPi3lI+7Gz0XhozoApuhJHkwikfVksdDM6l90+UqAkYUxyQzYKvPuvTAgq8v
+         NRZmrpdHvQmBhJrTfVJn0io1VVcjvlxwOUtGbMZZWhGykkvnb/9utha5v2hWW0Ro/eGc
+         OC9ywnfj2adTwt/nk0Ah1rL6wkILcLGWlaLbSD/8PtgOj0vb4lSF7PN6zpPojRF29bo8
+         5Fj1J22CcU5h8IwsoFSifDkJU2MRjI/hkzo1Dcfxdc4o+Cy/0NYYyBnKAqMBwBrsNDVl
+         zAzpBiaj/QDK8jM4U/W/yLLptoDEd98w9Oy92s+/w71ZK8IcEdt64g3Ti+LtD6xo+5pI
+         f2xA==
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20161025 header.b=UJWNAMI9;
+       spf=pass (google.com: domain of batatsar@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=batatsar@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com
+Return-Path: <batatsar@gmail.com>
+Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])
+        by mx.google.com with SMTPS id w4sor7354262edi.19.2019.11.09.17.28.03
+        for <tatattai@gmail.com>
+        (Google Transport Security);
+        Sat, 09 Nov 2019 17:28:03 -0800 (PST)
+Received-SPF: pass (google.com: domain of batatsar@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20161025 header.b=UJWNAMI9;
+       spf=pass (google.com: domain of batatsar@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=batatsar@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20161025;
+        h=mime-version:from:date:message-id:subject:to;
+        bh=qi3Z6NXimbEj/iv0E8IKvBnH3dvbveqylE9OZGBdUz8=;
+        b=UJWNAMI9JBfWJ24dFpSrkR79aFNeUdPDDzOvmzmXsdzERMeEQo6OREOxgSXwxZbiTc
+         Bv4N9vBp0tsCGlrMlEewcB9c+ZUBn97QD2XcrPWptQnY5hriQvjPgUkS8L2R+EXfszNV
+         +fkTGpVrDCIeJ+gv3IcQxVVreec5m2iAUZLKTvANhG6VtNGs9NBSpoDaNdKVbyjjrOg/
+         3l8N+Fyy6Y1JUGWyjKf+xgJTu3NyOr1pmLtxHDkJpFoRhr4bYyjHMbDQY/Dh9/qWUfTp
+         x1vRddz7Jx2P3CbI61lGqZuDHugooPvGI2TsX6kgxfMYtnkPaeZSWf2PtVpjWmqOsMs8
+         1GZA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:from:date:message-id:subject:to;
+        bh=qi3Z6NXimbEj/iv0E8IKvBnH3dvbveqylE9OZGBdUz8=;
+        b=EOwkbjprGKMrCj1AtZ1o369jjMGc0ZXPxtHPkdiE9qiktRU2Or+svN+XI3VA29aP85
+         KjPXY1BMmddBkzL0dHzvxl4r/yVHmFAUpEh+JM3qX3SRt0adjcp71YQ69gLt2069tN0U
+         1AcYOjyXgRSSahA9wCfVtJ9vW8Jd+F1sT6XHJ3TqrLyvrJohyIJKR+x+m9XkLpmfG0a4
+         B1gMwSSX3/y+gkcjbgZ7V8ILLZHKUswolDVc053HCk/kIGygU4WtFev/IdLfY4ReKOxJ
+         EfdAQwIThUpTf3UJub34iCD8mAWFyuK6EcE+NulgsvdYtkrNAbFnf9NZNRvnk8PgZweq
+         f0BQ==
+X-Gm-Message-State: APjAAAUJz/Up6mCmj6u3msW5ExDuB4krNbbxD9EonxjFQtZSvBzcVdHu
+	MdOTf6l20dFAwbh45GePc74leGM3rPevfgeOit1mZg==
+X-Google-Smtp-Source: APXvYqzwPuiwnBhdffDFkNHpYdv6+9iZF9LQzaGnuHET0warGR6E77k/iJ79NXn/kgpb3iFuj5983ZKet+FugvnBWc8=
+X-Received: by 2002:aa7:c2c7:: with SMTP id m7mr18828208edp.295.1573349282990;
+ Sat, 09 Nov 2019 17:28:02 -0800 (PST)
+MIME-Version: 1.0
+From: Ta Ta <batatsar@gmail.com>
+Date: Sun, 10 Nov 2019 08:27:51 +0700
+Message-ID: <CAKr_FsZ4kLv=51YHLDP2G7JS0v3eunNZtvVSpaFnU8ut=EcU1g@mail.gmail.com>
+Subject: =?UTF-8?B?WGluIGNow6Bv?=
+To: tata tata <tatattai@gmail.com>
+Content-Type: multipart/alternative; boundary="0000000000001ecfe70596f3edb6"
+
+--0000000000001ecfe70596f3edb6
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: base64
+
+VGjhu60gbuG7mWkgZHVuZyB1dGYtOCwgICAgICAgICAgICAgICAgIGPDsyBuaGnhu4F1IGto4buP
+YW5nIHRy4bqvbmcgbGnDqm4gdGnhur9wDQoNCg0KDQpUVFQNCg==
+--0000000000001ecfe70596f3edb6
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: base64
+
+PGRpdiBkaXI9Imx0ciI+VGjhu60gbuG7mWkgZHVuZyB1dGYtOCzCoCDCoCDCoCDCoCDCoCDCoCDC
+oCDCoCDCoGPDsyBuaGnhu4F1IGto4buPYW5nIHRy4bqvbmcgbGnDqm4gdGnhur9wPGRpdj48YnI+
+PC9kaXY+PGRpdj48YnI+PC9kaXY+PGRpdj48YnI+PC9kaXY+PGRpdj5UVFQ8L2Rpdj48ZGl2Pjxi
+cj48L2Rpdj48L2Rpdj4NCg==
+--0000000000001ecfe70596f3edb6--
