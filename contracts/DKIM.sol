@@ -61,6 +61,7 @@ contract DKIM {
         strings.slice h;
         strings.slice b;
         strings.slice bh;
+        uint l;
     }
 
     function verify(string memory raw) public view returns (uint success, string domain) {
@@ -101,6 +102,7 @@ contract DKIM {
     }
 
     function verifyBodyHash(strings.slice memory body, SigTags memory sigTags) internal pure returns (Status memory) {
+        if (sigTags.l > 0 && body._len > sigTags.l) body._len = sigTags.l;
         string memory processedBody = processBody(body, sigTags.cBody);
         bool check = false;
         if (sigTags.aHash.equals("sha256".toSlice())) {
@@ -218,6 +220,8 @@ contract DKIM {
                 sigTags.h = value;
             } else if (name.equals("b".toSlice())) {
                 sigTags.b = unfoldContinuationLines(value, true);
+            } else if (name.equals("l".toSlice())) {
+                sigTags.l = stringToUint(value.toString());
             }
         }
 
@@ -405,6 +409,18 @@ contract DKIM {
             if (isTrim) parts[i] = trim(parts[i]);
         }
         return "".toSlice().join(parts).toSlice();
+    }
+
+    function stringToUint(string s) internal pure returns (uint result) {
+        bytes memory b = bytes(s);
+        uint i;
+        result = 0;
+        for (i = 0; i < b.length; i++) {
+            uint c = uint(b[i]);
+            if (c >= 48 && c <= 57) {
+                result = result * 10 + (c - 48);
+            }
+        }
     }
 
     function joinNoEmpty(strings.slice memory self, strings.slice[] memory parts) internal pure returns (string memory) {
