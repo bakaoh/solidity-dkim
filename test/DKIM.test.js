@@ -48,6 +48,13 @@ contract("DKIM", function([creator]) {
     verification.domain.should.be.equal("protonmail.com");
   });
 
+  it("verify raw Outlook", async function() {
+    let message = fs.readFileSync(path.join(__dirname, "data", "test-outlook.eml"));
+    let verification = await this.dkim.verify(message.toString());
+    verification.success.should.be.bignumber.equal(new BN(1));
+    verification.domain.should.be.equal("outlook.com");
+  });
+
   it("verify Gmail with utf-8, whitespace sequences", async function() {
     let message = fs.readFileSync(path.join(__dirname, "data", "test-utf8.eml"));
     let verification = await this.dkim.verify(message.toString());

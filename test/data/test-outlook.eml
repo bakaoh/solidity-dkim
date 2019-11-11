@@ -1,0 +1,139 @@
+Delivered-To: tatattai@gmail.com
+Received: by 2002:a67:fad6:0:0:0:0:0 with SMTP id g22csp5998797vsq;
+        Sun, 10 Nov 2019 19:23:53 -0800 (PST)
+X-Google-Smtp-Source: APXvYqya3S0xabi1PkKr2oT2K2AE77IWzdxuhg1ECSa8Kwp7ur/K6cNxex8RWJT66BfIL5MLTzY8
+X-Received: by 2002:a62:ee09:: with SMTP id e9mr26124280pfi.243.1573442633185;
+        Sun, 10 Nov 2019 19:23:53 -0800 (PST)
+ARC-Seal: i=2; a=rsa-sha256; t=1573442633; cv=pass;
+        d=google.com; s=arc-20160816;
+        b=g+XKE16aLQZ4Hgw5JQ6/oppJXiFTi1IYuNHwC9PtUMP11krZPgTeSuBRYBEZIMqQZL
+         NOh/8+VsrPW9B/JRR89AWOiBSUkv+lEcKAM5eTErkwh22X5UBo3b63I9/l+iy1D85lCt
+         JK2Rb5gs0LOyLbFXBWhPthP2rSvnRGNZ46z0zcV3lCc2d925PE6OQgnuGLvk7/CH9vBh
+         hUIoGBuPHiMr/6MKtO9ZsXO/N5/y/EZV3iu99SU8+2qPfiywI/s4V4zw2a/ZBZRxEuRW
+         OQCfndnWQAkaHhgbeGYcK5FwcByv7I3whoQJRQlEjxR8P6YxsSz6nKW69xe+H3nmQGZJ
+         YO3Q==
+ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20160816;
+        h=mime-version:content-language:accept-language:message-id:date
+         :thread-index:thread-topic:subject:to:from:dkim-signature;
+        bh=3DDoJ4FBJxxpXV7LsVzFSu76fjyJmlxArtProOGF8KU=;
+        b=wuj/iD/+Iym7dU+c+OLd1NaRP4E5h3tqElpxJNAT7/Rqa7vO/yDLanIXYHiLtsaRHo
+         ypsUvJqFABf8IOi29gpLoL/X7A/p2hxvs7HGSvdjlljI1AKWZ38ptic2IBez1xDlMtjz
+         dHn9TjFKQnINjFEDQfjwfOVuT0idKn69FQDBN6hcQMjyQwDHxPOBmkPBaQ22e3t5YJTe
+         AyXqnfm1J18GWAZ49AflySKS3KrSbQQMeEPHccJE/xuiQfsYkVhAhc8oT7SuLUsXNC8s
+         4f/dwWvpynaTFLoe6aiFS60ZWwC5BLdRx6WIohQVe/dnGOlCV5nY0nOQ2Mwm8527QJOF
+         8syg==
+ARC-Authentication-Results: i=2; mx.google.com;
+       dkim=pass header.i=@outlook.com header.s=selector1 header.b=PbsFFh5A;
+       arc=pass (i=1);
+       spf=pass (google.com: domain of batatsar@outlook.com designates 40.92.255.52 as permitted sender) smtp.mailfrom=batatsar@outlook.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=outlook.com
+Return-Path: <batatsar@outlook.com>
+Received: from APC01-HK2-obe.outbound.protection.outlook.com (mail-oln040092255052.outbound.protection.outlook.com. [40.92.255.52])
+        by mx.google.com with ESMTPS id j6si15356340pgq.38.2019.11.10.19.23.52
+        for <tatattai@gmail.com>
+        (version=TLS1_2 cipher=ECDHE-RSA-AES128-GCM-SHA256 bits=128/128);
+        Sun, 10 Nov 2019 19:23:53 -0800 (PST)
+Received-SPF: pass (google.com: domain of batatsar@outlook.com designates 40.92.255.52 as permitted sender) client-ip=40.92.255.52;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@outlook.com header.s=selector1 header.b=PbsFFh5A;
+       arc=pass (i=1);
+       spf=pass (google.com: domain of batatsar@outlook.com designates 40.92.255.52 as permitted sender) smtp.mailfrom=batatsar@outlook.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=outlook.com
+ARC-Seal: i=1; a=rsa-sha256; s=arcselector9901; d=microsoft.com; cv=none;
+ b=BUc3q44E5gnFcFYeGrTltVFRxt040SCBK1hridkKOfXZI3t+YEc4HvUbP3dVQmhOLdspYOaCneU5w7iEJ0HpmDT3Gs8ZT4moykWP8mWl8lcXt4H5vbBV6Ujzp4kDwmcJVEKiTJJhX3GX6E12UMYCPFlkneOb/16ZsLDcOwmLIpY09uNXJCjV5hJgd5KZ7VDCFTCrz+6AedGSLx9kLnkKwxjrk6PQQpiRVvyDxYMWbd14jRFsh0JCE9rYvyFFOk6pS5zf7WRzfBcia9N4RmNnDJkPvQR5wnel6JE6YcvC4o7EiLKA64SUZtAcEPbpzti1U5NfBs+0a4AoWBy5yuq3yw==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
+ s=arcselector9901;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
+ bh=3DDoJ4FBJxxpXV7LsVzFSu76fjyJmlxArtProOGF8KU=;
+ b=lyQryTF96LqTD//D78dNdr9r4ARAWZ6fx7SEDsxV/Xc6/y/+AGPlIEc9XuPI2Sti6q1az69lwTLCyxHVkTFxHxEh4XAQuBh1T7qTKIOtPeSvvdq/Zei+//YKMah1cSoYZsjFTBq07jhUzj2JdGTyaG5NdIEOoC0iavKOTPfx7FZRHU3FQx82wIVVXx6cHzNP/RgeESxU8cYPTSN4C++6XZ5D/ycIFSfgG+F9KfJOxh2bigl8DhpWTvJHfFrgfbeQ5tVtRZY8371vc3zlj7FzYEJ0xLdi15EeKS49D19DAJjfukSQDW0FAt4ySljrcflHmjeLPwp0CvQtBh1kuLwSCA==
+ARC-Authentication-Results: i=1; mx.microsoft.com 1; spf=none; dmarc=none;
+ dkim=none; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=outlook.com;
+ s=selector1;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-SenderADCheck;
+ bh=3DDoJ4FBJxxpXV7LsVzFSu76fjyJmlxArtProOGF8KU=;
+ b=PbsFFh5AuMbGeUga9P2WSTeP5N+fbRQ/MBgCCFdOnMi8qgnZR1tLmGFwAzctpMcMQmtqE2Wdu+YT3/8YmnKB/4Uf2dAu1deqcEC5I5m9uehad9UbNcYnn+nG/ryMuwFUuEWzprMYWR7AsNfGawRAp1JJaLroi++ozxO1ZDWzQTZtRVQFWbAeOPnYmTFzNGGCXCoTwDn0P7+nRnZaDbGlERp7W0H2p9/WKlVJnoA0mQbPIWzBrxkWWQcJcOng71JxTtmSFZBSYKWswc+iSqcK566C2gMf0YZ1OPiwMjf0LIbMiGPFEogYNJBnfTfYxK4ntYO42daXZNqpxHdUV1trHQ==
+Received: from PU1APC01FT040.eop-APC01.prod.protection.outlook.com
+ (10.152.252.51) by PU1APC01HT215.eop-APC01.prod.protection.outlook.com
+ (10.152.253.165) with Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384) id 15.20.2430.22; Mon, 11 Nov
+ 2019 03:23:46 +0000
+Received: from KU1PR01MB1926.apcprd01.prod.exchangelabs.com (10.152.252.58) by
+ PU1APC01FT040.mail.protection.outlook.com (10.152.253.118) with Microsoft
+ SMTP Server (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id
+ 15.20.2430.22 via Frontend Transport; Mon, 11 Nov 2019 03:23:46 +0000
+Received: from KU1PR01MB1926.apcprd01.prod.exchangelabs.com
+ ([fe80::642a:4cc0:3ce6:a17f]) by KU1PR01MB1926.apcprd01.prod.exchangelabs.com
+ ([fe80::642a:4cc0:3ce6:a17f%6]) with mapi id 15.20.2430.027; Mon, 11 Nov 2019
+ 03:23:45 +0000
+From: Bata Tsar <batatsar@outlook.com>
+To: "tatattai@gmail.com" <tatattai@gmail.com>
+Subject: Hi ta
+Thread-Topic: Hi ta
+Thread-Index: AQHVmD9sGGlBRafEmU+XbjrrsopRuA==
+Date: Mon, 11 Nov 2019 03:23:45 +0000
+Message-ID:
+ <KU1PR01MB192613BCDA25783645654138DE740@KU1PR01MB1926.apcprd01.prod.exchangelabs.com>
+Accept-Language: en-US
+Content-Language: en-US
+X-MS-Has-Attach:
+X-MS-TNEF-Correlator:
+x-incomingtopheadermarker:
+ OriginalChecksum:219118D63A5D37153F34507E72B8964EE82A1E02598314917F03A905F390ADFE;UpperCasedChecksum:F8BEF101B3F9B6AC83818228179C53B27CF05698128F59F88EC8D7B4500E1A36;SizeAsReceived:6641;Count:42
+x-tmn: [10a+v5akypiFaq1I6rYBkgWObzbCWwnj]
+x-ms-publictraffictype: Email
+x-incomingheadercount: 42
+x-eopattributedmessage: 0
+x-ms-office365-filtering-correlation-id: ec84581d-1399-4be4-1d1c-08d766568f6a
+x-ms-traffictypediagnostic: PU1APC01HT215:
+x-microsoft-antispam: BCL:0;
+x-microsoft-antispam-message-info:
+ 2BwJujnnxq6vsi91UVqpRSyLcd3WQTdUy2zHJcZ9sIbZpdJg6XUsNIt89dR9/XmL
+x-ms-exchange-transport-forked: True
+Content-Type: multipart/alternative;
+	boundary="_000_KU1PR01MB192613BCDA25783645654138DE740KU1PR01MB1926apcp_"
+MIME-Version: 1.0
+X-OriginatorOrg: outlook.com
+X-MS-Exchange-CrossTenant-RMS-PersistedConsumerOrg: 00000000-0000-0000-0000-000000000000
+X-MS-Exchange-CrossTenant-Network-Message-Id: ec84581d-1399-4be4-1d1c-08d766568f6a
+X-MS-Exchange-CrossTenant-rms-persistedconsumerorg: 00000000-0000-0000-0000-000000000000
+X-MS-Exchange-CrossTenant-originalarrivaltime: 11 Nov 2019 03:23:45.4761
+ (UTC)
+X-MS-Exchange-CrossTenant-fromentityheader: Internet
+X-MS-Exchange-CrossTenant-id: 84df9e7f-e9f6-40af-b435-aaaaaaaaaaaa
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: PU1APC01HT215
+
+--_000_KU1PR01MB192613BCDA25783645654138DE740KU1PR01MB1926apcp_
+Content-Type: text/plain; charset="iso-8859-1"
+Content-Transfer-Encoding: quoted-printable
+
+Test...
+
+TTT
+
+--_000_KU1PR01MB192613BCDA25783645654138DE740KU1PR01MB1926apcp_
+Content-Type: text/html; charset="iso-8859-1"
+Content-Transfer-Encoding: quoted-printable
+
+<html>
+<head>
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Diso-8859-=
+1">
+<style type=3D"text/css" style=3D"display:none;"> P {margin-top:0;margin-bo=
+ttom:0;} </style>
+</head>
+<body dir=3D"ltr">
+<div style=3D"font-family: Calibri, Arial, Helvetica, sans-serif; font-size=
+: 12pt; color: rgb(0, 0, 0);">
+Test...</div>
+<div style=3D"font-family: Calibri, Arial, Helvetica, sans-serif; font-size=
+: 12pt; color: rgb(0, 0, 0);">
+<br>
+</div>
+<div style=3D"font-family: Calibri, Arial, Helvetica, sans-serif; font-size=
+: 12pt; color: rgb(0, 0, 0);">
+TTT</div>
+</body>
+</html>
+
+--_000_KU1PR01MB192613BCDA25783645654138DE740KU1PR01MB1926apcp_--

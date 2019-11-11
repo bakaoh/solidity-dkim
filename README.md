@@ -4,7 +4,7 @@ A Solidity library to verify [DKIM signatures](https://tools.ietf.org/html/rfc63
 
 - Support `rsa-sha1` and `rsa-sha256` signature algorithms
 - Implement both canonicalization algorithms (`simple`, `relaxed`)
-- Support the signature schemes by Gmail, Yahoo, ProtonMail
+- Support the signature schemes by Gmail, Yahoo, ProtonMail, Outlook
 - Gas cost under 3 million gas
 
 The contract receive raw email as input and return number of success verifications along with the last success domain or the last fail status (if there's no success).
@@ -33,7 +33,7 @@ $ RAW_EMAIL=<path to your email file> npm run test
 $ RAW_EMAIL=test/data/gmail-raw.txt npm run test
 ```
 
-## 3rd party smart contracts
+## 3rd party Smart Contracts
 
 - [https://github.com/Arachnid/solidity-stringutils](https://github.com/Arachnid/solidity-stringutils)
 - [https://github.com/ensdomains/buffer](https://github.com/ensdomains/buffer)

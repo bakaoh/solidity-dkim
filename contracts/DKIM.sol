@@ -27,6 +27,11 @@ library Hardcode {
             exponent = hex"010001";
             return;
         }
+        if ("outlook.com".toSlice().equals(domain) && "selector1".toSlice().equals(selector)) {
+            modulus = hex"bd6ca4b6b20bf033bff941af31bbfb70f77f5e88296ecee9815c3ccbd95d3ba00032683cfa28c4365fdcec56f531f28ceee1b72ccc00af475554ac8cfa66e4a17da4e4bee5b11390af467d8064a9bbbc6b9d939ae7cfbfa4885dd9793f0c53e96b9f9329b5a875bb1264f44df33d11639c79f6377349c957944c8df661197663a2293b0e3fa03bbd0c5f4b26bd8e0e4df3575f34dbcfec79d67a330cb0ac8832b5e9b713a1201b84607ebb2437bdf10817d78a07bc6336533e7789ffd25bc305d3dad887db29e19b1a58b220e93df8dc9ce56edaec1911820c9f493e9c515998a6b73f94a7f0652b34fab020ab06285bfc18b7a59884041e148bfbebb8be5109";
+            exponent = hex"010001";
+            return;
+        }
     }
 }
 
@@ -138,7 +143,7 @@ contract DKIM {
         strings.slice memory tab = "\x09".toSlice();
         strings.slice memory signame = "dkim-signature".toSlice();
 
-        Headers memory headers = Headers(0, 0, new strings.slice[](30), new strings.slice[](30), new strings.slice[](3));
+        Headers memory headers = Headers(0, 0, new strings.slice[](80), new strings.slice[](80), new strings.slice[](3));
         strings.slice memory headerName = strings.slice(0, 0);
         strings.slice memory headerValue = strings.slice(0, 0);
         while (!all.empty()) {
@@ -231,7 +236,7 @@ contract DKIM {
         }
 
         // The tags listed as required in Section 3.5 are v, a, b, bh, d, h, s
-        if (sigTags.aKey.empty() || sigTags.b.empty() || sigTags.bh.empty() || sigTags.d.empty() || sigTags.s.empty()) {
+        if (sigTags.aKey.empty() || sigTags.b.empty() || sigTags.bh.empty() || sigTags.d.empty() || sigTags.s.empty() || sigTags.h.length == 0) {
             status = Status(STATE_PERMFAIL, "required tag missing".toSlice());
             return;
         }
